@@ -1,0 +1,29 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["ripe", "bbox", "picking_point"],
+  "properties": {
+    "ripe": {
+      "type": "boolean",
+      "description": "True if the target strawberry is fully ripe (uniformly red)."
+    },
+    "bbox": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "description": "Target strawberry bounding box as [x1, y1, x2, y2] in pixels, top-left origin, with x1 <= x2 and y1 <= y2.",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "picking_point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "description": "Grasp point on the peduncle (stem) just above the calyx, as [u, v] in pixels, top-left origin.",
+      "items": {
+        "type": "integer"
+      }
+    }
+  }
+}

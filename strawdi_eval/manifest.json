@@ -1,0 +1,8340 @@
+{
+  "schema_version": "strawdi_eval/1",
+  "generated_at": "2026-09-14T15:26:55+00:00",
+  "generator": {
+    "script": "build_manifest.py",
+    "argv": [],
+    "sha256": "f793b822f95e1bce33a384229305db2bb928d1b787fd6bd4d9f7a38e5d6ddaaa"
+  },
+  "python": "3.12.7",
+  "dataset": {
+    "name": "StrawDI_Db1",
+    "url": "https://strawdi.github.io/",
+    "root": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1",
+    "split": "val",
+    "n_total": 100,
+    "n_selected": 100,
+    "selection": "all",
+    "selection_indices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72,
+      73,
+      74,
+      75,
+      76,
+      77,
+      78,
+      79,
+      80,
+      81,
+      82,
+      83,
+      84,
+      85,
+      86,
+      87,
+      88,
+      89,
+      90,
+      91,
+      92,
+      93,
+      94,
+      95,
+      96,
+      97,
+      98,
+      99
+    ],
+    "frame_policy": {
+      "max_edge": 1280,
+      "delivered": "unchanged (1008x756 is inside the ceiling)",
+      "note": "frames copied byte-for-byte; no resampling, so GT coordinates map 1:1 onto the delivered image"
+    }
+  },
+  "coordinate_convention": {
+    "origin": "top-left, x right, y down (matches the prompt)",
+    "bbox": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+    "semantics_gap": "the prompt asks for the WHOLE-fruit box (including parts hidden behind occluders) while GT boxes cover the VISIBLE mask surface only \u2014 occluded-fruit predictions are expected to exceed the GT box and lose IoU"
+  },
+  "control": {
+    "image": "data/control/control_6305.png",
+    "truth": {
+      "code": "6305",
+      "red_circle": [
+        520,
+        80
+      ],
+      "green_square": [
+        200,
+        400
+      ]
+    },
+    "prompt": "This is a synthetic test image, 640x480 pixels, containing a 4-digit code and two coloured shapes on a plain white background.\n\nReport three things.\n1. The 4-digit code, read digit by digit, as a string.\n2. The centre of the red circle, as [u, v].\n3. The centre of the green square, as [u, v].\n\nCoordinates use a top-left origin: x increases to the right (0..639), y increases downward (0..479), whole pixels.\n\nReply with ONLY this JSON object and nothing else - no prose, no code fences:\n{\"code\": \"0000\", \"red_circle\": [u, v], \"green_square\": [u, v]}",
+    "purpose": "synthetic vision-delivery gate: if the model cannot read the code and shape centres off this image, every number in the batch is invalid"
+  },
+  "statistics": {
+    "n_instances_total": 572,
+    "instances_per_image": {
+      "min": 1,
+      "max": 13,
+      "mean": 5.72
+    },
+    "instance_area_px": {
+      "min": 59,
+      "p25": 1265,
+      "median": 4335,
+      "p75": 11743,
+      "max": 52844
+    }
+  },
+  "samples": [
+    {
+      "sample_id": "1002",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1002.png",
+      "images": {
+        "raw": "data/frames/1002.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1002.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1002.png",
+      "label_sha256": "0ae25e474d4b3c310b6ee7ce9eafffda2f2a977b48bf803b87241b471855fde7",
+      "frame_sha256": "e5b35571d14bdab1548b5f2f8555dc5e9cde0dd1c2f10592f52013dc78645c92",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          993,
+          241,
+          1008,
+          286
+        ],
+        [
+          915,
+          165,
+          1007,
+          240
+        ],
+        [
+          851,
+          144,
+          900,
+          208
+        ],
+        [
+          678,
+          467,
+          743,
+          551
+        ],
+        [
+          551,
+          335,
+          633,
+          462
+        ],
+        [
+          458,
+          123,
+          482,
+          156
+        ],
+        [
+          25,
+          155,
+          58,
+          185
+        ]
+      ],
+      "gt_areas": [
+        474,
+        4177,
+        1360,
+        3685,
+        7622,
+        497,
+        771
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1029",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1029.png",
+      "images": {
+        "raw": "data/frames/1029.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1029.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1029.png",
+      "label_sha256": "86857d6282d1323ca82171a37ae47071467f04c9bb60c1d2b9469fb9f2f4ca79",
+      "frame_sha256": "1ec1f332e0057d210a577654bb4b391616a7a748f65e08b3ab2a0b5009753c48",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          975,
+          78,
+          1008,
+          121
+        ],
+        [
+          902,
+          225,
+          970,
+          283
+        ],
+        [
+          748,
+          185,
+          892,
+          335
+        ],
+        [
+          585,
+          191,
+          695,
+          286
+        ],
+        [
+          164,
+          16,
+          191,
+          31
+        ],
+        [
+          687,
+          288,
+          738,
+          348
+        ]
+      ],
+      "gt_areas": [
+        471,
+        1979,
+        16728,
+        8122,
+        145,
+        2209
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "108",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/108.png",
+      "images": {
+        "raw": "data/frames/108.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/108.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/108.png",
+      "label_sha256": "5a50a433ef6e61c1292541bd7515097ee21496fad9569ec4179d2cf71b1320b9",
+      "frame_sha256": "99c7dfce98654689d1386d5074281b518f77654e5f1b416ec56826693259f918",
+      "n_gt": 10,
+      "gt_boxes": [
+        [
+          920,
+          118,
+          971,
+          163
+        ],
+        [
+          800,
+          263,
+          862,
+          327
+        ],
+        [
+          584,
+          323,
+          674,
+          432
+        ],
+        [
+          539,
+          301,
+          585,
+          352
+        ],
+        [
+          478,
+          345,
+          592,
+          480
+        ],
+        [
+          442,
+          364,
+          486,
+          414
+        ],
+        [
+          340,
+          317,
+          469,
+          495
+        ],
+        [
+          252,
+          403,
+          334,
+          473
+        ],
+        [
+          259,
+          368,
+          322,
+          447
+        ],
+        [
+          162,
+          171,
+          189,
+          198
+        ]
+      ],
+      "gt_areas": [
+        932,
+        2560,
+        6864,
+        1618,
+        9285,
+        1591,
+        12420,
+        1421,
+        3362,
+        366
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1099",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1099.png",
+      "images": {
+        "raw": "data/frames/1099.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1099.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1099.png",
+      "label_sha256": "e52bc5f01eb99d3d819d9e8bbf544e7aa780cd7d17911ecd640e630f027df1e3",
+      "frame_sha256": "4f00b7332030482be291bd2c9299d19a3b93245c08eda38e77ad64bc75960ba4",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          72,
+          69,
+          124,
+          130
+        ],
+        [
+          258,
+          385,
+          413,
+          551
+        ],
+        [
+          249,
+          43,
+          282,
+          81
+        ]
+      ],
+      "gt_areas": [
+        942,
+        15205,
+        257
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1104",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1104.png",
+      "images": {
+        "raw": "data/frames/1104.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1104.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1104.png",
+      "label_sha256": "57376e8680506cfe9d00df3e6652697524453de18c788bc179d5edf434a2acc4",
+      "frame_sha256": "616c80943894565cdb6bbab990edec9740c50fc62e65578e2bd792916df6daf2",
+      "n_gt": 2,
+      "gt_boxes": [
+        [
+          362,
+          154,
+          528,
+          328
+        ],
+        [
+          513,
+          331,
+          637,
+          480
+        ]
+      ],
+      "gt_areas": [
+        20304,
+        14067
+      ],
+      "gt_instance_ids": [
+        1,
+        2
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1112",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1112.png",
+      "images": {
+        "raw": "data/frames/1112.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1112.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1112.png",
+      "label_sha256": "beea08695dbf82b21d969955db1868a6f3f6656f8de8a8f8865c82350a1d5913",
+      "frame_sha256": "50ab9077a418787c54cb24ba9bda3a84fa6df384a8597cf7624c8f9e93b37ac3",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          885,
+          53,
+          901,
+          69
+        ],
+        [
+          799,
+          170,
+          844,
+          203
+        ],
+        [
+          548,
+          288,
+          593,
+          352
+        ],
+        [
+          710,
+          307,
+          774,
+          358
+        ],
+        [
+          596,
+          315,
+          687,
+          433
+        ],
+        [
+          121,
+          179,
+          213,
+          238
+        ]
+      ],
+      "gt_areas": [
+        153,
+        810,
+        2274,
+        2471,
+        7918,
+        3831
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "113",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/113.png",
+      "images": {
+        "raw": "data/frames/113.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/113.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/113.png",
+      "label_sha256": "94d49b91eb049d50bd426350390fefff2745f078daf569fe3cdca7b05849e902",
+      "frame_sha256": "00b80da6bb37a34f50a0ea2cd02a358d1354739150b6cc0f3a4f224159186770",
+      "n_gt": 1,
+      "gt_boxes": [
+        [
+          553,
+          344,
+          661,
+          467
+        ]
+      ],
+      "gt_areas": [
+        9701
+      ],
+      "gt_instance_ids": [
+        1
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1147",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1147.png",
+      "images": {
+        "raw": "data/frames/1147.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1147.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1147.png",
+      "label_sha256": "1642140d2bea2f42826a1a4d7f7f78272e85379a733251fe5a467ba67e0c5e68",
+      "frame_sha256": "48a6514bf6004212157e04f4741755208dc870664cf7c77b88905306c32d4267",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          89,
+          556,
+          141,
+          612
+        ],
+        [
+          187,
+          560,
+          208,
+          603
+        ],
+        [
+          295,
+          351,
+          387,
+          515
+        ],
+        [
+          525,
+          186,
+          647,
+          319
+        ],
+        [
+          642,
+          319,
+          721,
+          415
+        ],
+        [
+          677,
+          244,
+          718,
+          292
+        ],
+        [
+          748,
+          240,
+          817,
+          319
+        ],
+        [
+          754,
+          214,
+          792,
+          231
+        ]
+      ],
+      "gt_areas": [
+        1401,
+        420,
+        11914,
+        11590,
+        5450,
+        1531,
+        4384,
+        231
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "117",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/117.png",
+      "images": {
+        "raw": "data/frames/117.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/117.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/117.png",
+      "label_sha256": "b659fac74ad4be4a59a3e2a9ef386416c01d9f1c611e80d59f67c7b8d929cc99",
+      "frame_sha256": "f2814775e47df3cee5c03042701c1a53b5ecf99d1b7ea489782d0b54491f2f4b",
+      "n_gt": 10,
+      "gt_boxes": [
+        [
+          758,
+          168,
+          779,
+          188
+        ],
+        [
+          831,
+          392,
+          866,
+          426
+        ],
+        [
+          755,
+          357,
+          821,
+          463
+        ],
+        [
+          670,
+          392,
+          767,
+          510
+        ],
+        [
+          448,
+          322,
+          539,
+          464
+        ],
+        [
+          136,
+          98,
+          317,
+          216
+        ],
+        [
+          103,
+          139,
+          188,
+          201
+        ],
+        [
+          103,
+          88,
+          166,
+          128
+        ],
+        [
+          237,
+          0,
+          279,
+          41
+        ],
+        [
+          153,
+          0,
+          204,
+          26
+        ]
+      ],
+      "gt_areas": [
+        341,
+        745,
+        3793,
+        8336,
+        9655,
+        15165,
+        2829,
+        1558,
+        1106,
+        902
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1215",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1215.png",
+      "images": {
+        "raw": "data/frames/1215.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1215.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1215.png",
+      "label_sha256": "ab692c2a0022aa02393f9388138adf5adfe8641499f067a3bfcfdc28ea442820",
+      "frame_sha256": "5515c63acfc44d4d687ccc1a59b1b55920024edc5c518427871ed9a8ce4b2e24",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          349,
+          393,
+          482,
+          585
+        ],
+        [
+          250,
+          372,
+          352,
+          513
+        ],
+        [
+          443,
+          260,
+          573,
+          489
+        ]
+      ],
+      "gt_areas": [
+        17617,
+        9767,
+        21424
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1272",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1272.png",
+      "images": {
+        "raw": "data/frames/1272.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1272.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1272.png",
+      "label_sha256": "0465a83b24c784aaa2d95815431f8d04532681086b92f29beb8f9660c7fdc982",
+      "frame_sha256": "c9b1fe4655f7894bfd275733a97e159d15937f7ff9762a9d961322a34047ff4e",
+      "n_gt": 9,
+      "gt_boxes": [
+        [
+          17,
+          153,
+          49,
+          182
+        ],
+        [
+          325,
+          117,
+          367,
+          162
+        ],
+        [
+          447,
+          406,
+          554,
+          616
+        ],
+        [
+          524,
+          349,
+          620,
+          452
+        ],
+        [
+          623,
+          339,
+          766,
+          479
+        ],
+        [
+          675,
+          271,
+          761,
+          333
+        ],
+        [
+          554,
+          163,
+          582,
+          200
+        ],
+        [
+          665,
+          94,
+          756,
+          153
+        ],
+        [
+          810,
+          126,
+          860,
+          168
+        ]
+      ],
+      "gt_areas": [
+        496,
+        1523,
+        17201,
+        7468,
+        12883,
+        3732,
+        624,
+        3979,
+        1648
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1274",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1274.png",
+      "images": {
+        "raw": "data/frames/1274.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1274.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1274.png",
+      "label_sha256": "b1894d8377c64c680040742929dc37c82f51cb80b683d33ff5ec98eff54e4eff",
+      "frame_sha256": "8e9b2b454891fc7b0515cd2654b890f49b021d0a03d68108a37a246a2b87f17d",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          217,
+          243,
+          358,
+          439
+        ],
+        [
+          357,
+          262,
+          476,
+          447
+        ],
+        [
+          459,
+          202,
+          616,
+          402
+        ],
+        [
+          849,
+          200,
+          903,
+          257
+        ]
+      ],
+      "gt_areas": [
+        20181,
+        15541,
+        22505,
+        2244
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1286",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1286.png",
+      "images": {
+        "raw": "data/frames/1286.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1286.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1286.png",
+      "label_sha256": "809bef477af7d6ce3c7b29e73b0c542d1eee4288fc04bdd2cecbe59477f424e9",
+      "frame_sha256": "7c2639225376cd5c69d8965b2109411c9c5bee31bcdd7f27c351f0b8ee3cb4e3",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          711,
+          46,
+          802,
+          114
+        ],
+        [
+          724,
+          6,
+          765,
+          52
+        ],
+        [
+          588,
+          112,
+          735,
+          251
+        ],
+        [
+          154,
+          512,
+          272,
+          696
+        ]
+      ],
+      "gt_areas": [
+        2987,
+        741,
+        15614,
+        15636
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1360",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1360.png",
+      "images": {
+        "raw": "data/frames/1360.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1360.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1360.png",
+      "label_sha256": "2bd6415b733e3cfd1a3c592ced5be227c7f08c9c9fae056039c889ce4195caca",
+      "frame_sha256": "00e84d9814cb94ac3c1811ff6153cf565d92730c35fc110777285ab78ad77e4c",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          482,
+          42,
+          504,
+          74
+        ],
+        [
+          774,
+          210,
+          862,
+          311
+        ],
+        [
+          705,
+          272,
+          790,
+          404
+        ],
+        [
+          345,
+          262,
+          462,
+          400
+        ],
+        [
+          308,
+          377,
+          421,
+          540
+        ],
+        [
+          176,
+          357,
+          307,
+          584
+        ],
+        [
+          68,
+          442,
+          124,
+          511
+        ]
+      ],
+      "gt_areas": [
+        181,
+        6861,
+        8268,
+        12614,
+        13132,
+        21140,
+        2624
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1367",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1367.png",
+      "images": {
+        "raw": "data/frames/1367.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1367.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1367.png",
+      "label_sha256": "1f22998a0d6e141f20b28f32cbae604e6ec54097b41205f69ebf1e6dc50a97bf",
+      "frame_sha256": "fd9ec9a381880fb78940f9541e523ea1c43e94e1a84e2ccded71e0f738ba5f56",
+      "n_gt": 9,
+      "gt_boxes": [
+        [
+          912,
+          171,
+          1007,
+          262
+        ],
+        [
+          935,
+          55,
+          1008,
+          140
+        ],
+        [
+          772,
+          92,
+          821,
+          139
+        ],
+        [
+          880,
+          0,
+          906,
+          21
+        ],
+        [
+          727,
+          0,
+          863,
+          56
+        ],
+        [
+          522,
+          431,
+          593,
+          531
+        ],
+        [
+          421,
+          377,
+          526,
+          537
+        ],
+        [
+          312,
+          294,
+          373,
+          363
+        ],
+        [
+          273,
+          133,
+          375,
+          223
+        ]
+      ],
+      "gt_areas": [
+        4461,
+        3770,
+        1264,
+        227,
+        1455,
+        4791,
+        13143,
+        3248,
+        7030
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "138",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/138.png",
+      "images": {
+        "raw": "data/frames/138.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/138.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/138.png",
+      "label_sha256": "84fd94f81abc7eb50783fccdc41094ad6ccba72c982cd6f801ce06c09e26529d",
+      "frame_sha256": "8afa2268f9077159b7a1756ab147cd4eb0a814442dfc551c885f7e532cedabe0",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          719,
+          248,
+          790,
+          277
+        ],
+        [
+          504,
+          322,
+          623,
+          511
+        ],
+        [
+          429,
+          282,
+          533,
+          386
+        ],
+        [
+          354,
+          230,
+          416,
+          292
+        ]
+      ],
+      "gt_areas": [
+        885,
+        16022,
+        4115,
+        3140
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1426",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1426.png",
+      "images": {
+        "raw": "data/frames/1426.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1426.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1426.png",
+      "label_sha256": "8d4a57d3b9ac9cee4e02fc3c60621703153adca804396545ff940254df27a607",
+      "frame_sha256": "3cffe880a9a51a650ca5be0118bd7423ed2b8122fadf141ed6134fabf938c37a",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          448,
+          20,
+          488,
+          48
+        ],
+        [
+          977,
+          71,
+          1008,
+          102
+        ],
+        [
+          695,
+          298,
+          808,
+          451
+        ],
+        [
+          613,
+          205,
+          711,
+          343
+        ],
+        [
+          489,
+          419,
+          585,
+          566
+        ],
+        [
+          420,
+          396,
+          503,
+          520
+        ],
+        [
+          402,
+          278,
+          440,
+          318
+        ],
+        [
+          290,
+          405,
+          357,
+          501
+        ]
+      ],
+      "gt_areas": [
+        258,
+        741,
+        12412,
+        9735,
+        10207,
+        6643,
+        723,
+        4422
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1478",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1478.png",
+      "images": {
+        "raw": "data/frames/1478.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1478.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1478.png",
+      "label_sha256": "28e45716015b4f5c09e7eb9d3695dc8ee2e12aec74f9f4c57c30cbfb18aff253",
+      "frame_sha256": "d39641507f349c6aa4a695f2a76782df5534619a1d4a5f814c45a1c0e4cb12db",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          666,
+          0,
+          702,
+          26
+        ],
+        [
+          81,
+          17,
+          93,
+          40
+        ],
+        [
+          623,
+          271,
+          749,
+          446
+        ],
+        [
+          526,
+          359,
+          589,
+          429
+        ],
+        [
+          0,
+          165,
+          97,
+          228
+        ]
+      ],
+      "gt_areas": [
+        481,
+        170,
+        15092,
+        3302,
+        4450
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1531",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1531.png",
+      "images": {
+        "raw": "data/frames/1531.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1531.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1531.png",
+      "label_sha256": "f8613713fa3002bfbd356b09e2ad21c97a8ef6f0581315e2e879f4ed774831c6",
+      "frame_sha256": "ca22d8619cfeb6f96b7bcdd5fd2385b9c9651236587c1d000f8cb4e9e55baee6",
+      "n_gt": 11,
+      "gt_boxes": [
+        [
+          839,
+          87,
+          873,
+          100
+        ],
+        [
+          866,
+          38,
+          915,
+          74
+        ],
+        [
+          957,
+          117,
+          996,
+          152
+        ],
+        [
+          873,
+          88,
+          938,
+          126
+        ],
+        [
+          715,
+          36,
+          740,
+          59
+        ],
+        [
+          735,
+          49,
+          760,
+          69
+        ],
+        [
+          589,
+          302,
+          667,
+          400
+        ],
+        [
+          474,
+          241,
+          590,
+          418
+        ],
+        [
+          533,
+          310,
+          569,
+          346
+        ],
+        [
+          335,
+          208,
+          434,
+          311
+        ],
+        [
+          244,
+          26,
+          276,
+          62
+        ]
+      ],
+      "gt_areas": [
+        187,
+        900,
+        1030,
+        1179,
+        327,
+        241,
+        5281,
+        9185,
+        989,
+        7562,
+        638
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1561",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1561.png",
+      "images": {
+        "raw": "data/frames/1561.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1561.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1561.png",
+      "label_sha256": "174b4f3956d1e81176c09bca6eae1aaef62f0dbc4181dff96d1241e7ae621a0f",
+      "frame_sha256": "e8a5aeba7073b7b29f7e5fb7b43493d2bd370865919f2e8798f9e7345f72c5f6",
+      "n_gt": 2,
+      "gt_boxes": [
+        [
+          418,
+          118,
+          638,
+          451
+        ],
+        [
+          138,
+          322,
+          283,
+          520
+        ]
+      ],
+      "gt_areas": [
+        49810,
+        20810
+      ],
+      "gt_instance_ids": [
+        1,
+        2
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1603",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1603.png",
+      "images": {
+        "raw": "data/frames/1603.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1603.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1603.png",
+      "label_sha256": "9eed5ce2ebf0ed5c2231b5f299b90a74a00ec7cb2c3793fe6a3985fbd07f4a28",
+      "frame_sha256": "f201642c8713ec4215d1483b2bfbd19dc4407dd45c08ca31f66e0eae73c6bd0d",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          699,
+          296,
+          848,
+          481
+        ],
+        [
+          516,
+          210,
+          643,
+          393
+        ],
+        [
+          245,
+          131,
+          333,
+          235
+        ]
+      ],
+      "gt_areas": [
+        20943,
+        17613,
+        6364
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1667",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1667.png",
+      "images": {
+        "raw": "data/frames/1667.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1667.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1667.png",
+      "label_sha256": "a0da20777533c1eb284001fc310fb4cf3201a8e8414623b29a6f5bfb3741b443",
+      "frame_sha256": "a6a29fa53e003a6b28922bfe52f6738c49e9494d5e459d9e7b0e409de282c3af",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          299,
+          165,
+          396,
+          313
+        ],
+        [
+          285,
+          317,
+          390,
+          487
+        ],
+        [
+          179,
+          317,
+          288,
+          484
+        ],
+        [
+          242,
+          199,
+          306,
+          261
+        ],
+        [
+          0,
+          391,
+          55,
+          456
+        ]
+      ],
+      "gt_areas": [
+        5911,
+        12961,
+        13880,
+        2960,
+        2632
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1673",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1673.png",
+      "images": {
+        "raw": "data/frames/1673.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1673.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1673.png",
+      "label_sha256": "d917c57d3916729b5e9581631494e6f7fea221af72a8daddbcb5647a74857daa",
+      "frame_sha256": "6359c965f103ecb5cf0f7824fc9f5b9dfca0ec475eef6a36c309e16a0eef6601",
+      "n_gt": 9,
+      "gt_boxes": [
+        [
+          639,
+          108,
+          648,
+          121
+        ],
+        [
+          988,
+          31,
+          1001,
+          45
+        ],
+        [
+          690,
+          191,
+          713,
+          215
+        ],
+        [
+          852,
+          320,
+          867,
+          332
+        ],
+        [
+          671,
+          228,
+          709,
+          259
+        ],
+        [
+          598,
+          262,
+          623,
+          285
+        ],
+        [
+          585,
+          316,
+          618,
+          345
+        ],
+        [
+          498,
+          275,
+          573,
+          350
+        ],
+        [
+          391,
+          387,
+          444,
+          464
+        ]
+      ],
+      "gt_areas": [
+        90,
+        108,
+        212,
+        126,
+        858,
+        459,
+        788,
+        4346,
+        3068
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1685",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1685.png",
+      "images": {
+        "raw": "data/frames/1685.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1685.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1685.png",
+      "label_sha256": "eab6945fac6d2bc2533b80875132cbb2f3b086a1bd19275e934a58a3de749da1",
+      "frame_sha256": "42465ee7a9d2d6ddf9093cf1fe55e989029f894f632f7f651682370d596eeb14",
+      "n_gt": 11,
+      "gt_boxes": [
+        [
+          911,
+          319,
+          940,
+          342
+        ],
+        [
+          852,
+          276,
+          902,
+          331
+        ],
+        [
+          745,
+          190,
+          822,
+          250
+        ],
+        [
+          685,
+          261,
+          721,
+          302
+        ],
+        [
+          597,
+          114,
+          627,
+          139
+        ],
+        [
+          397,
+          255,
+          472,
+          365
+        ],
+        [
+          296,
+          222,
+          403,
+          355
+        ],
+        [
+          223,
+          252,
+          276,
+          303
+        ],
+        [
+          88,
+          175,
+          116,
+          200
+        ],
+        [
+          40,
+          77,
+          95,
+          112
+        ],
+        [
+          32,
+          47,
+          90,
+          84
+        ]
+      ],
+      "gt_areas": [
+        415,
+        1952,
+        3207,
+        1147,
+        586,
+        6156,
+        10526,
+        2137,
+        496,
+        707,
+        1413
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1686",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1686.png",
+      "images": {
+        "raw": "data/frames/1686.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1686.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1686.png",
+      "label_sha256": "e34260130f8a412d50b3ff973ba269dd635fbbb3e4d092b163c4348db3bd0bd4",
+      "frame_sha256": "69e4f0088cdfa9f8cf260adfdf29c9abc910fb6c7886c979625385b25852241b",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          751,
+          0,
+          797,
+          20
+        ],
+        [
+          634,
+          220,
+          774,
+          322
+        ],
+        [
+          386,
+          342,
+          472,
+          460
+        ],
+        [
+          221,
+          176,
+          353,
+          293
+        ]
+      ],
+      "gt_areas": [
+        535,
+        10664,
+        7813,
+        10606
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1716",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1716.png",
+      "images": {
+        "raw": "data/frames/1716.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1716.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1716.png",
+      "label_sha256": "a5b06020c40bf9e81917c0d36c66da45ab7886feffe72fd09a1de4be2f15d68b",
+      "frame_sha256": "8a5423b8af089703a17fbaf3b3c828dae00780cfb89142388120ad1fce3356b1",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          869,
+          0,
+          935,
+          15
+        ],
+        [
+          342,
+          371,
+          475,
+          549
+        ],
+        [
+          217,
+          273,
+          364,
+          470
+        ],
+        [
+          81,
+          98,
+          144,
+          148
+        ],
+        [
+          23,
+          37,
+          125,
+          86
+        ]
+      ],
+      "gt_areas": [
+        712,
+        17539,
+        21253,
+        2196,
+        2127
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1717",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1717.png",
+      "images": {
+        "raw": "data/frames/1717.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1717.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1717.png",
+      "label_sha256": "a2f53be22314aa37a7eb75f0cbb1e9c614d9cd5f150c32fcb07ff3ea3adf886f",
+      "frame_sha256": "2bb4b503bac9b88bd277b3a0a85e623ba16500d4a8e0c52f314f19374917fb1d",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          986,
+          123,
+          1008,
+          145
+        ],
+        [
+          557,
+          33,
+          569,
+          41
+        ],
+        [
+          141,
+          12,
+          151,
+          22
+        ],
+        [
+          506,
+          176,
+          575,
+          256
+        ],
+        [
+          489,
+          197,
+          507,
+          219
+        ],
+        [
+          410,
+          151,
+          490,
+          228
+        ],
+        [
+          186,
+          72,
+          213,
+          97
+        ]
+      ],
+      "gt_areas": [
+        295,
+        61,
+        64,
+        4287,
+        319,
+        4672,
+        374
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1733",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1733.png",
+      "images": {
+        "raw": "data/frames/1733.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1733.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1733.png",
+      "label_sha256": "c34c38a75e040ee18f0adfb297c92d23c75a331e2e4d6d63e45c4e4c9d83450d",
+      "frame_sha256": "917095c4ed8f6b873ae8bcd32a8b1d5bab8de04f01b09edd31fdd0f925aa01f2",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          738,
+          377,
+          847,
+          513
+        ],
+        [
+          670,
+          375,
+          756,
+          459
+        ],
+        [
+          109,
+          145,
+          146,
+          176
+        ],
+        [
+          284,
+          143,
+          318,
+          188
+        ],
+        [
+          370,
+          239,
+          420,
+          291
+        ],
+        [
+          234,
+          181,
+          371,
+          320
+        ]
+      ],
+      "gt_areas": [
+        9136,
+        5448,
+        817,
+        878,
+        2049,
+        14097
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1740",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1740.png",
+      "images": {
+        "raw": "data/frames/1740.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1740.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1740.png",
+      "label_sha256": "43babfa94e3c7405e0b8de71668811ee83d583f8ca93f4733bc8e699679eaaed",
+      "frame_sha256": "048c1a82082522998ab03356453cc661547d0ff7cfd4a2739add0728fac3e31c",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          617,
+          26,
+          632,
+          41
+        ],
+        [
+          450,
+          39,
+          457,
+          51
+        ],
+        [
+          610,
+          183,
+          715,
+          298
+        ],
+        [
+          516,
+          261,
+          637,
+          455
+        ],
+        [
+          451,
+          396,
+          514,
+          480
+        ],
+        [
+          373,
+          225,
+          439,
+          295
+        ],
+        [
+          215,
+          149,
+          237,
+          207
+        ],
+        [
+          0,
+          57,
+          44,
+          132
+        ]
+      ],
+      "gt_areas": [
+        123,
+        59,
+        8758,
+        15917,
+        3641,
+        3272,
+        705,
+        1153
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1753",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1753.png",
+      "images": {
+        "raw": "data/frames/1753.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1753.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1753.png",
+      "label_sha256": "752c5abcf680b3d350c48dbd8da50d76d339295fc714e200338137c3244b0912",
+      "frame_sha256": "57c6597fdff9a2eb5099261277ae363c5df9f5fc699a9252afa2a64d4522b406",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          709,
+          0,
+          747,
+          16
+        ],
+        [
+          395,
+          180,
+          488,
+          348
+        ],
+        [
+          311,
+          316,
+          399,
+          435
+        ],
+        [
+          721,
+          268,
+          832,
+          407
+        ]
+      ],
+      "gt_areas": [
+        472,
+        10575,
+        7741,
+        11227
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1783",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1783.png",
+      "images": {
+        "raw": "data/frames/1783.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1783.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1783.png",
+      "label_sha256": "9326d7b015fec1fcf46d71322e91e72ba6b79533c73cf52c2c11f5764162e596",
+      "frame_sha256": "a99290dc26769ba85993633afe70890ebcb84f58456df9c9afb6229569836a28",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          825,
+          187,
+          869,
+          216
+        ],
+        [
+          686,
+          405,
+          752,
+          493
+        ],
+        [
+          568,
+          337,
+          619,
+          398
+        ],
+        [
+          389,
+          291,
+          482,
+          416
+        ],
+        [
+          262,
+          144,
+          353,
+          212
+        ],
+        [
+          223,
+          96,
+          250,
+          124
+        ],
+        [
+          158,
+          214,
+          219,
+          269
+        ]
+      ],
+      "gt_areas": [
+        1013,
+        4325,
+        2270,
+        8682,
+        3253,
+        471,
+        2556
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1792",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1792.png",
+      "images": {
+        "raw": "data/frames/1792.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1792.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1792.png",
+      "label_sha256": "29387466eee2145c0ef54e879356dddaa8d569250526c278ccb1a4dd1ed860b5",
+      "frame_sha256": "33f30e8cb32abedce5f9f629c0d749df6394cd0bc47b23c044450681b4340bcc",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          449,
+          97,
+          568,
+          219
+        ],
+        [
+          584,
+          295,
+          807,
+          609
+        ],
+        [
+          415,
+          410,
+          602,
+          651
+        ]
+      ],
+      "gt_areas": [
+        10759,
+        50111,
+        34261
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1803",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1803.png",
+      "images": {
+        "raw": "data/frames/1803.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1803.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1803.png",
+      "label_sha256": "e97ff655b6ee508bd7d66b393b4657927fe9f74c861d80b59e360d93a79eb4a6",
+      "frame_sha256": "e687f7ed9d6ae60396f020a2245bb39fb5b3a86c363530ca941965b69812eec3",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          984,
+          128,
+          1008,
+          228
+        ],
+        [
+          355,
+          0,
+          454,
+          98
+        ],
+        [
+          556,
+          426,
+          704,
+          625
+        ],
+        [
+          304,
+          267,
+          454,
+          421
+        ]
+      ],
+      "gt_areas": [
+        1800,
+        4487,
+        21046,
+        17685
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1813",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1813.png",
+      "images": {
+        "raw": "data/frames/1813.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1813.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1813.png",
+      "label_sha256": "0fc11e16b7c7732addbf6ea6487836cc4bdd231d6fb7f921495ba7c8ce99a293",
+      "frame_sha256": "f3eb185542223a17e48614e6d226e8fbad30f4cc41f34be6a47ba12b74906281",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          304,
+          490,
+          387,
+          595
+        ],
+        [
+          161,
+          271,
+          320,
+          516
+        ],
+        [
+          381,
+          297,
+          496,
+          432
+        ],
+        [
+          498,
+          337,
+          607,
+          444
+        ],
+        [
+          429,
+          456,
+          552,
+          602
+        ],
+        [
+          604,
+          361,
+          708,
+          497
+        ],
+        [
+          565,
+          98,
+          740,
+          233
+        ]
+      ],
+      "gt_areas": [
+        5236,
+        25465,
+        10503,
+        8681,
+        11743,
+        11042,
+        15076
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1852",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1852.png",
+      "images": {
+        "raw": "data/frames/1852.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1852.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1852.png",
+      "label_sha256": "56daae763cf36deead6aca5e2dbb059fc881aa7139e9847b59422f25b5067479",
+      "frame_sha256": "5d000e5ee30fcb0850117feb7216f1c583b5c63926ca134bc0d98e2bb8407436",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          704,
+          86,
+          738,
+          131
+        ],
+        [
+          745,
+          157,
+          859,
+          276
+        ],
+        [
+          796,
+          362,
+          848,
+          414
+        ],
+        [
+          424,
+          435,
+          501,
+          554
+        ],
+        [
+          288,
+          352,
+          376,
+          499
+        ]
+      ],
+      "gt_areas": [
+        1014,
+        8361,
+        1841,
+        6584,
+        9275
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "192",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/192.png",
+      "images": {
+        "raw": "data/frames/192.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/192.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/192.png",
+      "label_sha256": "e872ee91ef74a2c0e9c0beabc2e5b9cbda636ec325902ab9c9d97b2ea1b168af",
+      "frame_sha256": "a2c91d62b4afbc9e4ecd4cb482cd50eaefbb96c419a329c48a7a8ad99718a132",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          649,
+          11,
+          680,
+          29
+        ],
+        [
+          580,
+          21,
+          627,
+          59
+        ],
+        [
+          564,
+          189,
+          616,
+          230
+        ],
+        [
+          429,
+          210,
+          563,
+          325
+        ],
+        [
+          403,
+          1,
+          462,
+          42
+        ],
+        [
+          279,
+          404,
+          368,
+          510
+        ],
+        [
+          212,
+          258,
+          305,
+          371
+        ],
+        [
+          80,
+          645,
+          101,
+          658
+        ]
+      ],
+      "gt_areas": [
+        339,
+        1134,
+        1527,
+        11018,
+        1020,
+        7053,
+        7708,
+        89
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1943",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1943.png",
+      "images": {
+        "raw": "data/frames/1943.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1943.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1943.png",
+      "label_sha256": "8a323803a6d5f63dfcad49d02bb1f142fe4dff6cd5ae0c7e6d63ee6e15ca41d4",
+      "frame_sha256": "9606cc261cc6d1eb07fb1ceb9b6126e49013d1c1ccf39b09aa9e79517a703693",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          835,
+          385,
+          953,
+          525
+        ],
+        [
+          882,
+          203,
+          952,
+          284
+        ],
+        [
+          676,
+          168,
+          812,
+          290
+        ],
+        [
+          563,
+          245,
+          680,
+          360
+        ],
+        [
+          229,
+          150,
+          366,
+          267
+        ],
+        [
+          130,
+          179,
+          248,
+          267
+        ],
+        [
+          69,
+          228,
+          157,
+          311
+        ],
+        [
+          62,
+          471,
+          136,
+          558
+        ]
+      ],
+      "gt_areas": [
+        12300,
+        4080,
+        12905,
+        10212,
+        11577,
+        7550,
+        4900,
+        4697
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "1979",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/1979.png",
+      "images": {
+        "raw": "data/frames/1979.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/1979.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/1979.png",
+      "label_sha256": "5c6c6fd4c842f1d19add3bf0c341857001e7410e059b2220070dd81d7208e853",
+      "frame_sha256": "57f3486547013c0821728394018b981889d102c589ee883c55be26da18b49edb",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          490,
+          26,
+          570,
+          155
+        ],
+        [
+          469,
+          366,
+          634,
+          576
+        ],
+        [
+          301,
+          419,
+          478,
+          699
+        ],
+        [
+          200,
+          164,
+          402,
+          468
+        ]
+      ],
+      "gt_areas": [
+        7580,
+        24765,
+        36565,
+        43249
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2094",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2094.png",
+      "images": {
+        "raw": "data/frames/2094.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2094.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2094.png",
+      "label_sha256": "fa441c47ae105933070531008f44fd024c30dac334863b3d1124e0a8ec3160bb",
+      "frame_sha256": "b3e253c3f64083048329eed4060e55f0543c5a781b49b567d74c40767b4855cf",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          557,
+          124,
+          715,
+          258
+        ],
+        [
+          302,
+          374,
+          367,
+          456
+        ],
+        [
+          234,
+          416,
+          317,
+          535
+        ],
+        [
+          239,
+          128,
+          279,
+          149
+        ]
+      ],
+      "gt_areas": [
+        15689,
+        3780,
+        7430,
+        444
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2105",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2105.png",
+      "images": {
+        "raw": "data/frames/2105.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2105.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2105.png",
+      "label_sha256": "87e680687381d70a279561b154bab322da3a8bfb4b9c638227b1d2a6b35d83d0",
+      "frame_sha256": "56c5aebf44c1cd6d65aba2c27215828cbfba7de16d3fbbbada7f23a701b34ed9",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          623,
+          247,
+          741,
+          429
+        ],
+        [
+          479,
+          329,
+          566,
+          436
+        ],
+        [
+          382,
+          332,
+          482,
+          472
+        ],
+        [
+          291,
+          318,
+          372,
+          418
+        ],
+        [
+          106,
+          359,
+          172,
+          415
+        ],
+        [
+          92,
+          213,
+          126,
+          259
+        ],
+        [
+          296,
+          83,
+          348,
+          131
+        ],
+        [
+          765,
+          0,
+          805,
+          42
+        ]
+      ],
+      "gt_areas": [
+        15308,
+        6787,
+        9513,
+        5424,
+        2576,
+        1007,
+        1465,
+        1294
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2121",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2121.png",
+      "images": {
+        "raw": "data/frames/2121.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2121.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2121.png",
+      "label_sha256": "f6d727f583877eb80c2ce0f6f955086d95d9b8ecd7ac810f9ea78d8c4207b74c",
+      "frame_sha256": "668ccada156fba4d8eefa948238060f16cf4233205d7a6a440c748dcec6430d2",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          567,
+          207,
+          687,
+          377
+        ],
+        [
+          428,
+          164,
+          576,
+          389
+        ],
+        [
+          687,
+          3,
+          745,
+          59
+        ]
+      ],
+      "gt_areas": [
+        14817,
+        24370,
+        1994
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2169",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2169.png",
+      "images": {
+        "raw": "data/frames/2169.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2169.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2169.png",
+      "label_sha256": "b8b10ae6167421f27962f896fb6b16948bb955396b98f442854d8e6e56c0603b",
+      "frame_sha256": "cf0128110c98a91fbcfb46b66178b6851d2234631bcb0d2c03faab4f3f955c2b",
+      "n_gt": 11,
+      "gt_boxes": [
+        [
+          483,
+          227,
+          616,
+          412
+        ],
+        [
+          242,
+          280,
+          312,
+          363
+        ],
+        [
+          797,
+          146,
+          901,
+          225
+        ],
+        [
+          694,
+          79,
+          836,
+          168
+        ],
+        [
+          953,
+          0,
+          993,
+          25
+        ],
+        [
+          792,
+          15,
+          838,
+          41
+        ],
+        [
+          777,
+          0,
+          812,
+          16
+        ],
+        [
+          732,
+          1,
+          769,
+          25
+        ],
+        [
+          325,
+          0,
+          375,
+          19
+        ],
+        [
+          28,
+          16,
+          165,
+          126
+        ],
+        [
+          131,
+          28,
+          181,
+          65
+        ]
+      ],
+      "gt_areas": [
+        16528,
+        3789,
+        4885,
+        3240,
+        610,
+        728,
+        324,
+        703,
+        577,
+        11171,
+        968
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2230",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2230.png",
+      "images": {
+        "raw": "data/frames/2230.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2230.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2230.png",
+      "label_sha256": "5b1435a9c2b89a5006bdd56fe0ec0e2ff8f2f40a2b1030332909a507feb9da9e",
+      "frame_sha256": "3d38266f2429eea3f270139dbca113e5e62c01319d01e1076344040e99254aca",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          610,
+          370,
+          767,
+          569
+        ],
+        [
+          406,
+          345,
+          591,
+          593
+        ],
+        [
+          291,
+          452,
+          402,
+          604
+        ]
+      ],
+      "gt_areas": [
+        21000,
+        31505,
+        11040
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2236",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2236.png",
+      "images": {
+        "raw": "data/frames/2236.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2236.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2236.png",
+      "label_sha256": "4ae45cd8596b22064375ec330d40d2cbdbd74341922b49c24798dfd7c767894d",
+      "frame_sha256": "1bacc2df975607618861ee3f3d6747840f59a843b51dc119c9edc18be02a19ac",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          363,
+          424,
+          431,
+          489
+        ],
+        [
+          859,
+          77,
+          912,
+          130
+        ],
+        [
+          665,
+          203,
+          827,
+          350
+        ],
+        [
+          476,
+          127,
+          647,
+          308
+        ],
+        [
+          414,
+          282,
+          489,
+          377
+        ],
+        [
+          246,
+          231,
+          386,
+          407
+        ],
+        [
+          176,
+          307,
+          232,
+          357
+        ],
+        [
+          89,
+          164,
+          121,
+          203
+        ]
+      ],
+      "gt_areas": [
+        2652,
+        1948,
+        18420,
+        23343,
+        4502,
+        17595,
+        1924,
+        807
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2247",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2247.png",
+      "images": {
+        "raw": "data/frames/2247.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2247.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2247.png",
+      "label_sha256": "e0b682347e21ad7097ab97aa44b6a2c0307b9a43dda80b3cb4bd81a4665d8773",
+      "frame_sha256": "5591354029c2ca89c5fb92ba32a18137a0bd1a2957f30a983be74ec1516b30a3",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          987,
+          278,
+          1008,
+          326
+        ],
+        [
+          687,
+          289,
+          787,
+          414
+        ],
+        [
+          517,
+          171,
+          726,
+          361
+        ],
+        [
+          443,
+          269,
+          514,
+          367
+        ],
+        [
+          520,
+          204,
+          555,
+          236
+        ],
+        [
+          289,
+          113,
+          315,
+          132
+        ],
+        [
+          88,
+          320,
+          144,
+          385
+        ]
+      ],
+      "gt_areas": [
+        165,
+        7635,
+        24446,
+        4522,
+        872,
+        273,
+        1991
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2295",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2295.png",
+      "images": {
+        "raw": "data/frames/2295.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2295.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2295.png",
+      "label_sha256": "cfb1beda26f772838fef825688819c6a389825762c5d83667cb8f5fdb7169f87",
+      "frame_sha256": "2415ba4300e60fc79cc89732c4655ca8825904b78f5bd819756e2b71906d0ea4",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          476,
+          184,
+          600,
+          276
+        ],
+        [
+          355,
+          186,
+          479,
+          338
+        ],
+        [
+          285,
+          289,
+          409,
+          459
+        ],
+        [
+          218,
+          208,
+          330,
+          349
+        ],
+        [
+          731,
+          242,
+          800,
+          307
+        ],
+        [
+          812,
+          158,
+          859,
+          199
+        ]
+      ],
+      "gt_areas": [
+        8305,
+        13506,
+        14731,
+        10829,
+        3224,
+        955
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "231",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/231.png",
+      "images": {
+        "raw": "data/frames/231.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/231.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/231.png",
+      "label_sha256": "1a00ce281f1941d9246fabcfb06c1f6172ff5bcbdb96e7ffac21a527fa46b58e",
+      "frame_sha256": "a7e31923cff9879143aa48bd07c2e9756fa30eaf34b89313e7f69f157f45f5ad",
+      "n_gt": 2,
+      "gt_boxes": [
+        [
+          382,
+          436,
+          599,
+          683
+        ],
+        [
+          645,
+          215,
+          768,
+          372
+        ]
+      ],
+      "gt_areas": [
+        38004,
+        13371
+      ],
+      "gt_instance_ids": [
+        1,
+        2
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2325",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2325.png",
+      "images": {
+        "raw": "data/frames/2325.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2325.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2325.png",
+      "label_sha256": "715576fe3e4d7e1af1d5069fd3b0d10ff8a3b5f867c4e3aa60ce46065644d873",
+      "frame_sha256": "cef6ff7259367d516f3b250b02e7d9867ecaffc9a539ee9eb8bdb8cb45ce2ec2",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          696,
+          289,
+          782,
+          418
+        ],
+        [
+          583,
+          250,
+          686,
+          452
+        ],
+        [
+          423,
+          319,
+          511,
+          452
+        ]
+      ],
+      "gt_areas": [
+        7987,
+        13181,
+        8830
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2351",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2351.png",
+      "images": {
+        "raw": "data/frames/2351.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2351.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2351.png",
+      "label_sha256": "1722009e999dee48c65a5fb6b7e473317def1902052a82e851e05221e8d5e427",
+      "frame_sha256": "71b58c662fc5631867f4d3a9ea341311d1246a7921d8cb6998df8e2b58445e3c",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          327,
+          312,
+          516,
+          583
+        ],
+        [
+          566,
+          255,
+          719,
+          437
+        ],
+        [
+          479,
+          500,
+          574,
+          634
+        ]
+      ],
+      "gt_areas": [
+        23968,
+        19898,
+        8410
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2360",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2360.png",
+      "images": {
+        "raw": "data/frames/2360.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2360.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2360.png",
+      "label_sha256": "219d1c49803294d4c57a7baacd0ccd246c75b38fbf102caa6733d8d28c208146",
+      "frame_sha256": "0cddc65e143dcbc10a2fc696bfb74014bfcc15554409a4046c719800c7e61539",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          202,
+          201,
+          323,
+          395
+        ],
+        [
+          500,
+          153,
+          649,
+          395
+        ],
+        [
+          371,
+          145,
+          502,
+          342
+        ]
+      ],
+      "gt_areas": [
+        13768,
+        25790,
+        19118
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2437",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2437.png",
+      "images": {
+        "raw": "data/frames/2437.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2437.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2437.png",
+      "label_sha256": "122b8b58d7092a0161b200a0f0aab43fa955f96159bc725c073f0655cc122063",
+      "frame_sha256": "9b1a97ab6180d6272d6a8add5767d3090fb49d32e30b854f57cbfa96eeb65c6a",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          72,
+          425,
+          195,
+          557
+        ],
+        [
+          233,
+          350,
+          299,
+          435
+        ],
+        [
+          250,
+          155,
+          401,
+          363
+        ],
+        [
+          748,
+          60,
+          885,
+          201
+        ]
+      ],
+      "gt_areas": [
+        10518,
+        4043,
+        22203,
+        14585
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2476",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2476.png",
+      "images": {
+        "raw": "data/frames/2476.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2476.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2476.png",
+      "label_sha256": "1acefaaab17508601d43d037c1f44a81f3481413f17d946b1f233cfcbddcd6dc",
+      "frame_sha256": "aa45012edbb2d8d2c84f0b5f60f822b5b7d3e3c3de76255f504d953c326a5691",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          212,
+          68,
+          303,
+          142
+        ],
+        [
+          231,
+          222,
+          283,
+          282
+        ],
+        [
+          395,
+          271,
+          485,
+          398
+        ],
+        [
+          564,
+          348,
+          637,
+          421
+        ]
+      ],
+      "gt_areas": [
+        3814,
+        2339,
+        8728,
+        3795
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2497",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2497.png",
+      "images": {
+        "raw": "data/frames/2497.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2497.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2497.png",
+      "label_sha256": "a91abef407ccdc7fe5bc659c2c904de70dea135e7074d97cbf7147c5bf920191",
+      "frame_sha256": "1af7fb07ac4101541fe20add2fc9e5360ac85d6c095d1cfa3c5796eb11e4d282",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          393,
+          303,
+          569,
+          565
+        ],
+        [
+          570,
+          330,
+          726,
+          507
+        ],
+        [
+          691,
+          306,
+          865,
+          537
+        ],
+        [
+          767,
+          195,
+          851,
+          307
+        ]
+      ],
+      "gt_areas": [
+        30049,
+        18988,
+        28003,
+        6468
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2506",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2506.png",
+      "images": {
+        "raw": "data/frames/2506.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2506.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2506.png",
+      "label_sha256": "b3236706b6356e04ad2460aa1c3f5f91f4a9a8e56b776b4366a142ccc7ca731e",
+      "frame_sha256": "30aa3a4ca4d27fc678e84b29565afe6cf3633855113670caa264d5b873f268ba",
+      "n_gt": 11,
+      "gt_boxes": [
+        [
+          573,
+          128,
+          720,
+          274
+        ],
+        [
+          183,
+          243,
+          272,
+          344
+        ],
+        [
+          284,
+          324,
+          386,
+          457
+        ],
+        [
+          389,
+          334,
+          455,
+          425
+        ],
+        [
+          524,
+          284,
+          562,
+          323
+        ],
+        [
+          588,
+          267,
+          629,
+          335
+        ],
+        [
+          588,
+          317,
+          708,
+          446
+        ],
+        [
+          709,
+          255,
+          815,
+          374
+        ],
+        [
+          818,
+          226,
+          892,
+          281
+        ],
+        [
+          878,
+          297,
+          945,
+          371
+        ],
+        [
+          937,
+          17,
+          1008,
+          80
+        ]
+      ],
+      "gt_areas": [
+        15823,
+        5541,
+        8555,
+        4227,
+        867,
+        880,
+        9292,
+        8678,
+        2644,
+        3293,
+        3188
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2529",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2529.png",
+      "images": {
+        "raw": "data/frames/2529.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2529.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2529.png",
+      "label_sha256": "ebe05d8f2f01a8824073a532d3c81e03ab44ccccd817a0162053e64e3a0f1e22",
+      "frame_sha256": "6460e9edb7fb05e113d1bc40862d264ad3232092c27257b93bf9b6fbead2f7c5",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          1,
+          189,
+          98,
+          240
+        ],
+        [
+          310,
+          0,
+          439,
+          111
+        ],
+        [
+          190,
+          298,
+          254,
+          376
+        ],
+        [
+          371,
+          288,
+          483,
+          438
+        ],
+        [
+          402,
+          402,
+          561,
+          619
+        ],
+        [
+          768,
+          407,
+          879,
+          542
+        ]
+      ],
+      "gt_areas": [
+        2437,
+        9685,
+        3536,
+        11744,
+        24827,
+        11474
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2561",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2561.png",
+      "images": {
+        "raw": "data/frames/2561.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2561.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2561.png",
+      "label_sha256": "5c2099cb8405937d17ded30d19d7d4a998c2d5faf086aa667a63cdf75fbf5386",
+      "frame_sha256": "4a8c3bd7e886bd66113a58499c9e3a8ba8fc42852d3846470312af2ee4d9fd6a",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          362,
+          87,
+          436,
+          182
+        ],
+        [
+          509,
+          152,
+          529,
+          196
+        ],
+        [
+          343,
+          237,
+          449,
+          381
+        ],
+        [
+          336,
+          326,
+          438,
+          438
+        ],
+        [
+          441,
+          333,
+          519,
+          436
+        ],
+        [
+          519,
+          263,
+          656,
+          466
+        ],
+        [
+          688,
+          163,
+          811,
+          326
+        ]
+      ],
+      "gt_areas": [
+        5028,
+        569,
+        10765,
+        5629,
+        5414,
+        18057,
+        14702
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2577",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2577.png",
+      "images": {
+        "raw": "data/frames/2577.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2577.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2577.png",
+      "label_sha256": "ef404c6885c97a84b52c92935162be12d2b2a24278d99dab1e2b36dcf2a4743c",
+      "frame_sha256": "34a2fa09329ddb7a9e17baa92826b13f0e18f2b0a38c752b0750dbe367f7b9a9",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          353,
+          302,
+          450,
+          426
+        ],
+        [
+          563,
+          168,
+          708,
+          322
+        ],
+        [
+          817,
+          229,
+          843,
+          252
+        ]
+      ],
+      "gt_areas": [
+        9126,
+        17347,
+        331
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2645",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2645.png",
+      "images": {
+        "raw": "data/frames/2645.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2645.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2645.png",
+      "label_sha256": "d32906bcf54b7f8cb2ed21fceb941cf02e3afba1b3846e172cec28f67877711a",
+      "frame_sha256": "bcddda9fe447a10d562641a48f64601de665a7a456dfb96620626c4a60e06aa9",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          519,
+          249,
+          610,
+          368
+        ],
+        [
+          686,
+          100,
+          849,
+          289
+        ],
+        [
+          843,
+          140,
+          895,
+          181
+        ],
+        [
+          972,
+          0,
+          1008,
+          32
+        ]
+      ],
+      "gt_areas": [
+        7991,
+        23930,
+        1295,
+        786
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2647",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2647.png",
+      "images": {
+        "raw": "data/frames/2647.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2647.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2647.png",
+      "label_sha256": "133707f6625193e9641f658baa87f2970378031056e90b74abd909d955141b99",
+      "frame_sha256": "d85d077e782bd354f3c95925f7c4cd6fbfabfa37f481f72877e76c5123264447",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          267,
+          312,
+          389,
+          455
+        ],
+        [
+          341,
+          526,
+          390,
+          593
+        ],
+        [
+          391,
+          401,
+          481,
+          526
+        ],
+        [
+          485,
+          416,
+          541,
+          452
+        ],
+        [
+          545,
+          327,
+          571,
+          352
+        ],
+        [
+          591,
+          177,
+          625,
+          210
+        ],
+        [
+          675,
+          270,
+          707,
+          299
+        ],
+        [
+          780,
+          303,
+          830,
+          348
+        ]
+      ],
+      "gt_areas": [
+        11256,
+        2284,
+        4056,
+        1137,
+        334,
+        781,
+        711,
+        1732
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2663",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2663.png",
+      "images": {
+        "raw": "data/frames/2663.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2663.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2663.png",
+      "label_sha256": "3333630e131959c4db462253d0866503d51b4d7f58a5484b02198ff89a3bceda",
+      "frame_sha256": "6ea7e42ea922aeb9ce6319949362fdf10860b3068c689837062cb450ababf504",
+      "n_gt": 10,
+      "gt_boxes": [
+        [
+          23,
+          57,
+          78,
+          102
+        ],
+        [
+          339,
+          114,
+          421,
+          226
+        ],
+        [
+          424,
+          126,
+          484,
+          184
+        ],
+        [
+          342,
+          302,
+          377,
+          342
+        ],
+        [
+          460,
+          207,
+          533,
+          312
+        ],
+        [
+          558,
+          244,
+          625,
+          329
+        ],
+        [
+          618,
+          76,
+          674,
+          114
+        ],
+        [
+          755,
+          305,
+          834,
+          409
+        ],
+        [
+          736,
+          276,
+          799,
+          346
+        ],
+        [
+          883,
+          344,
+          939,
+          418
+        ]
+      ],
+      "gt_areas": [
+        1819,
+        6881,
+        2718,
+        1066,
+        5694,
+        3832,
+        1579,
+        3472,
+        3072,
+        3014
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2746",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2746.png",
+      "images": {
+        "raw": "data/frames/2746.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2746.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2746.png",
+      "label_sha256": "f1638ae8af756f048a1d59556527b65a04c5b3cb7336e9734971538df050733c",
+      "frame_sha256": "2685ec3da5c287522d08f19a0aab9f210b956b697ca2c85d5098cc355b013dc6",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          492,
+          358,
+          597,
+          517
+        ],
+        [
+          387,
+          204,
+          521,
+          420
+        ],
+        [
+          692,
+          168,
+          731,
+          206
+        ],
+        [
+          350,
+          190,
+          391,
+          231
+        ],
+        [
+          113,
+          113,
+          148,
+          142
+        ]
+      ],
+      "gt_areas": [
+        12054,
+        16644,
+        964,
+        1365,
+        445
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2780",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2780.png",
+      "images": {
+        "raw": "data/frames/2780.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2780.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2780.png",
+      "label_sha256": "f23534d7de32b896b94705049f0d1149175e6b3ff43f950485439048bb6c4ba5",
+      "frame_sha256": "083dfc83370ddeb20736c3e9356094cd52291a1891f65c60df1344845f01b618",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          383,
+          157,
+          577,
+          431
+        ],
+        [
+          634,
+          270,
+          797,
+          490
+        ],
+        [
+          587,
+          169,
+          690,
+          292
+        ],
+        [
+          549,
+          273,
+          628,
+          375
+        ],
+        [
+          187,
+          337,
+          280,
+          443
+        ]
+      ],
+      "gt_areas": [
+        39061,
+        24782,
+        7728,
+        5197,
+        7478
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2864",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2864.png",
+      "images": {
+        "raw": "data/frames/2864.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2864.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2864.png",
+      "label_sha256": "5e030341ee65a0f46d2e240e7e4a1d27a29787130f229e0573bb06ec1d98ee96",
+      "frame_sha256": "6cfbecb93b81723d6ec043daad8f31674f199a74bf200754e99937f32da04e8a",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          415,
+          210,
+          527,
+          395
+        ],
+        [
+          295,
+          212,
+          403,
+          388
+        ],
+        [
+          202,
+          117,
+          306,
+          209
+        ],
+        [
+          225,
+          0,
+          273,
+          9
+        ],
+        [
+          993,
+          0,
+          1008,
+          15
+        ]
+      ],
+      "gt_areas": [
+        15461,
+        13498,
+        6367,
+        329,
+        183
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2867",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2867.png",
+      "images": {
+        "raw": "data/frames/2867.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2867.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2867.png",
+      "label_sha256": "3822182a324723e969bc3d11fa5f1d190fcd64b20c985472036daa84b1c839f3",
+      "frame_sha256": "5778aeaa814a06810bafcf1d53cfc2841f546ce8f1f011f85176a6488d19c3f7",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          351,
+          370,
+          475,
+          569
+        ],
+        [
+          202,
+          284,
+          357,
+          550
+        ],
+        [
+          199,
+          266,
+          263,
+          342
+        ],
+        [
+          0,
+          184,
+          42,
+          268
+        ]
+      ],
+      "gt_areas": [
+        18589,
+        27582,
+        3548,
+        2611
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2970",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2970.png",
+      "images": {
+        "raw": "data/frames/2970.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2970.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2970.png",
+      "label_sha256": "559974c4be1c4a39ca6160d764185eccf3620fc97552aae9cd49c91848f41867",
+      "frame_sha256": "aba96ee70a10697f935f63ac32b6e38bad39670b4809ef826727de57f29beea2",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          444,
+          508,
+          562,
+          638
+        ],
+        [
+          293,
+          394,
+          386,
+          495
+        ],
+        [
+          192,
+          31,
+          228,
+          84
+        ],
+        [
+          42,
+          0,
+          81,
+          31
+        ]
+      ],
+      "gt_areas": [
+        10644,
+        6106,
+        987,
+        734
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2989",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2989.png",
+      "images": {
+        "raw": "data/frames/2989.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2989.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2989.png",
+      "label_sha256": "ba1a16d9b15e1879af5ede047ae574f312304e92dc7502c1e86fc1f28eb43d68",
+      "frame_sha256": "75140aa6eb6a0342b5ec1d0738c45bf5836189f30e332633c322fb081790e545",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          596,
+          268,
+          720,
+          457
+        ],
+        [
+          565,
+          316,
+          639,
+          408
+        ],
+        [
+          294,
+          218,
+          433,
+          471
+        ],
+        [
+          73,
+          256,
+          185,
+          391
+        ]
+      ],
+      "gt_areas": [
+        12960,
+        5064,
+        27542,
+        11427
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "2997",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/2997.png",
+      "images": {
+        "raw": "data/frames/2997.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/2997.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/2997.png",
+      "label_sha256": "11258355e6dc4c2171806936349337184df3a76b03f506ff540d5901d8f1bb91",
+      "frame_sha256": "b6571cb8e96b619e069799f9ca039d95e4ab1fb85f53ab8a999028ce25389065",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          529,
+          370,
+          638,
+          516
+        ],
+        [
+          477,
+          326,
+          552,
+          415
+        ],
+        [
+          349,
+          414,
+          476,
+          584
+        ],
+        [
+          594,
+          70,
+          828,
+          224
+        ],
+        [
+          757,
+          176,
+          804,
+          219
+        ]
+      ],
+      "gt_areas": [
+        10783,
+        3291,
+        12352,
+        22348,
+        1518
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "3026",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/3026.png",
+      "images": {
+        "raw": "data/frames/3026.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/3026.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/3026.png",
+      "label_sha256": "3ba8c3a069d4b4366e09bd38c35ce9a5c14c6a78dd681cd1f4417ed1f0f73e56",
+      "frame_sha256": "7864392ae22f994c9c4980546746ae44fe35f7f9fbf0341ece23ad0d7ec6e446",
+      "n_gt": 9,
+      "gt_boxes": [
+        [
+          486,
+          341,
+          538,
+          419
+        ],
+        [
+          535,
+          287,
+          604,
+          383
+        ],
+        [
+          445,
+          304,
+          497,
+          371
+        ],
+        [
+          525,
+          242,
+          561,
+          288
+        ],
+        [
+          437,
+          163,
+          470,
+          195
+        ],
+        [
+          331,
+          196,
+          379,
+          252
+        ],
+        [
+          810,
+          156,
+          821,
+          165
+        ],
+        [
+          358,
+          33,
+          378,
+          61
+        ],
+        [
+          28,
+          290,
+          89,
+          367
+        ]
+      ],
+      "gt_areas": [
+        2976,
+        5027,
+        2330,
+        1266,
+        830,
+        1845,
+        66,
+        359,
+        3342
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "3063",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/3063.png",
+      "images": {
+        "raw": "data/frames/3063.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/3063.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/3063.png",
+      "label_sha256": "73c80c22f7ddfdf1cd67e70882bd445d180400087b8d4e9f4013bc391ef995bb",
+      "frame_sha256": "bd3f0b4f4ed82f78e2d8e4f5d1cfe9c541de4e877b1e276e1f3e56881d7f13ee",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          488,
+          320,
+          609,
+          479
+        ],
+        [
+          342,
+          208,
+          486,
+          446
+        ],
+        [
+          503,
+          249,
+          558,
+          308
+        ],
+        [
+          602,
+          226,
+          632,
+          255
+        ],
+        [
+          662,
+          255,
+          673,
+          264
+        ],
+        [
+          262,
+          96,
+          367,
+          176
+        ],
+        [
+          71,
+          269,
+          137,
+          360
+        ],
+        [
+          71,
+          161,
+          124,
+          210
+        ]
+      ],
+      "gt_areas": [
+        12671,
+        23407,
+        2539,
+        659,
+        66,
+        6056,
+        4232,
+        1694
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "3064",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/3064.png",
+      "images": {
+        "raw": "data/frames/3064.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/3064.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/3064.png",
+      "label_sha256": "fd71e7fe4c506c3d2552fdd0367422878be7f13e11dd57f4dadd7d8ac0903c2d",
+      "frame_sha256": "eb858bfb4174498a60a4dfe4c349ab701c73131defaaf592353ed421f2181719",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          843,
+          436,
+          936,
+          566
+        ],
+        [
+          581,
+          388,
+          696,
+          602
+        ],
+        [
+          487,
+          326,
+          596,
+          469
+        ],
+        [
+          373,
+          227,
+          497,
+          361
+        ],
+        [
+          508,
+          34,
+          537,
+          57
+        ],
+        [
+          213,
+          103,
+          399,
+          226
+        ]
+      ],
+      "gt_areas": [
+        7541,
+        18312,
+        10629,
+        12640,
+        487,
+        15459
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "3067",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/3067.png",
+      "images": {
+        "raw": "data/frames/3067.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/3067.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/3067.png",
+      "label_sha256": "ca1cfbf235f5428ad95780b92a8f57c069059f63b45ca43c66dc19f00b603dde",
+      "frame_sha256": "c3068805ab08db8364f89bf5b7f7000df3f7e86204f60bdaff081cf3b10fa32c",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          686,
+          369,
+          783,
+          466
+        ],
+        [
+          471,
+          362,
+          569,
+          488
+        ],
+        [
+          358,
+          426,
+          489,
+          592
+        ],
+        [
+          266,
+          397,
+          361,
+          541
+        ],
+        [
+          68,
+          296,
+          149,
+          363
+        ]
+      ],
+      "gt_areas": [
+        6214,
+        8723,
+        16580,
+        8251,
+        3429
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "332",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/332.png",
+      "images": {
+        "raw": "data/frames/332.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/332.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/332.png",
+      "label_sha256": "4eaaa65175909a334ccb65144e33a7f7b1f571e0ea94990ab8bc6f5f43fd3ae1",
+      "frame_sha256": "61f5ebc4f672dbebd71e6a2e56f1961bbca72dcb678a272ef2b570686f056146",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          0,
+          291,
+          86,
+          376
+        ],
+        [
+          350,
+          205,
+          499,
+          374
+        ],
+        [
+          513,
+          253,
+          644,
+          416
+        ],
+        [
+          748,
+          224,
+          839,
+          294
+        ],
+        [
+          830,
+          171,
+          871,
+          207
+        ],
+        [
+          880,
+          27,
+          914,
+          62
+        ]
+      ],
+      "gt_areas": [
+        5594,
+        18925,
+        16182,
+        4834,
+        1040,
+        932
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "363",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/363.png",
+      "images": {
+        "raw": "data/frames/363.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/363.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/363.png",
+      "label_sha256": "810573fc0d1372465fddca643ebac87aceef6d65dae1abd30bb2a4a7521f81ad",
+      "frame_sha256": "5c4b562d63b5f3e2a7a2a0791b7ec69dd51bf4b25ff0deb8d93ad70d0802c41b",
+      "n_gt": 9,
+      "gt_boxes": [
+        [
+          528,
+          258,
+          696,
+          481
+        ],
+        [
+          657,
+          192,
+          776,
+          358
+        ],
+        [
+          730,
+          155,
+          841,
+          253
+        ],
+        [
+          691,
+          73,
+          818,
+          167
+        ],
+        [
+          869,
+          224,
+          921,
+          269
+        ],
+        [
+          628,
+          103,
+          650,
+          124
+        ],
+        [
+          401,
+          86,
+          538,
+          263
+        ],
+        [
+          404,
+          410,
+          470,
+          489
+        ],
+        [
+          371,
+          494,
+          489,
+          642
+        ]
+      ],
+      "gt_areas": [
+        24820,
+        13693,
+        3621,
+        4608,
+        1778,
+        358,
+        10480,
+        3366,
+        11078
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "380",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/380.png",
+      "images": {
+        "raw": "data/frames/380.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/380.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/380.png",
+      "label_sha256": "d24fec88470546d340bb1e5951751fb5685c69477b40ae90c604b437e9c5047a",
+      "frame_sha256": "d2ba3e2691628346c70746b4e08f7eb4492751d081555b0c60f7998c62a0041c",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          590,
+          517,
+          706,
+          688
+        ],
+        [
+          422,
+          437,
+          594,
+          701
+        ],
+        [
+          200,
+          131,
+          259,
+          191
+        ],
+        [
+          106,
+          8,
+          154,
+          59
+        ]
+      ],
+      "gt_areas": [
+        13470,
+        32347,
+        2588,
+        1189
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "404",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/404.png",
+      "images": {
+        "raw": "data/frames/404.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/404.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/404.png",
+      "label_sha256": "f1791bfa53d3a8b0f4a58f8325d2b13e56161ed423f8e76692a14d27fc14789a",
+      "frame_sha256": "e4797131587943bfde55b81025b26a84dab7e84f77f1563da4613b07644d9def",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          739,
+          322,
+          785,
+          364
+        ],
+        [
+          787,
+          430,
+          876,
+          529
+        ],
+        [
+          657,
+          405,
+          795,
+          603
+        ],
+        [
+          668,
+          511,
+          730,
+          596
+        ],
+        [
+          548,
+          304,
+          691,
+          463
+        ],
+        [
+          404,
+          210,
+          542,
+          357
+        ],
+        [
+          36,
+          333,
+          94,
+          379
+        ]
+      ],
+      "gt_areas": [
+        1270,
+        5854,
+        18841,
+        2497,
+        16744,
+        14083,
+        1780
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "431",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/431.png",
+      "images": {
+        "raw": "data/frames/431.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/431.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/431.png",
+      "label_sha256": "806f230e72c44396858be2136589f9d9d457c17b04a0461d8775bafef05455e2",
+      "frame_sha256": "531701f71724162281a4e61cd81a0db61486f98134b1184a650f62630b34001c",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          790,
+          240,
+          817,
+          265
+        ],
+        [
+          773,
+          0,
+          812,
+          37
+        ],
+        [
+          605,
+          268,
+          711,
+          406
+        ],
+        [
+          541,
+          152,
+          570,
+          180
+        ],
+        [
+          1,
+          178,
+          39,
+          240
+        ],
+        [
+          509,
+          241,
+          561,
+          300
+        ]
+      ],
+      "gt_areas": [
+        482,
+        751,
+        10949,
+        523,
+        1894,
+        2314
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "451",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/451.png",
+      "images": {
+        "raw": "data/frames/451.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/451.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/451.png",
+      "label_sha256": "94f331f46211e072253c637474e927876ffb82abf00787364b70008e9be388c5",
+      "frame_sha256": "d157329f1b770f5a5d506eb1815070bc3d0e3a964440876e37311c741f3b2a39",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          654,
+          129,
+          834,
+          373
+        ],
+        [
+          615,
+          324,
+          692,
+          417
+        ],
+        [
+          488,
+          199,
+          658,
+          398
+        ]
+      ],
+      "gt_areas": [
+        30395,
+        4172,
+        23607
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "471",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/471.png",
+      "images": {
+        "raw": "data/frames/471.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/471.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/471.png",
+      "label_sha256": "e8920deba10c464990ed4d29a58271d16c67ae408733fff43f6e52011e8ab99b",
+      "frame_sha256": "8dfa9d4ba30abf0046f2570893f26fa9c54d198380dcc97669d0f336d789e645",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          644,
+          192,
+          712,
+          265
+        ],
+        [
+          537,
+          79,
+          712,
+          220
+        ],
+        [
+          376,
+          84,
+          541,
+          248
+        ],
+        [
+          342,
+          226,
+          480,
+          397
+        ],
+        [
+          253,
+          144,
+          321,
+          225
+        ]
+      ],
+      "gt_areas": [
+        3340,
+        16048,
+        19788,
+        15638,
+        4367
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "49",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/49.png",
+      "images": {
+        "raw": "data/frames/49.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/49.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/49.png",
+      "label_sha256": "85423600f10fa0c611ca772e99bc30c37b32a2086ec6f85878887c11950b539c",
+      "frame_sha256": "307c5ceecc1329cf5302264a8f454c41b1223e0aa3e648264c0ce1ade14d9b77",
+      "n_gt": 11,
+      "gt_boxes": [
+        [
+          997,
+          288,
+          1008,
+          311
+        ],
+        [
+          817,
+          0,
+          872,
+          26
+        ],
+        [
+          650,
+          293,
+          716,
+          342
+        ],
+        [
+          559,
+          215,
+          652,
+          320
+        ],
+        [
+          484,
+          196,
+          562,
+          283
+        ],
+        [
+          531,
+          64,
+          559,
+          97
+        ],
+        [
+          377,
+          185,
+          472,
+          250
+        ],
+        [
+          332,
+          170,
+          385,
+          213
+        ],
+        [
+          331,
+          217,
+          365,
+          244
+        ],
+        [
+          309,
+          140,
+          325,
+          156
+        ],
+        [
+          161,
+          361,
+          218,
+          424
+        ]
+      ],
+      "gt_areas": [
+        203,
+        1190,
+        2245,
+        5270,
+        4781,
+        736,
+        4973,
+        790,
+        650,
+        200,
+        2693
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "501",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/501.png",
+      "images": {
+        "raw": "data/frames/501.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/501.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/501.png",
+      "label_sha256": "3f6c9d0b29c396931ba82c11552f75c4222297b45a82f36105c5065c5033c1b7",
+      "frame_sha256": "4231af08f6e0921052e87415435ea42caf4a76b5fe3ed3dc88fd26c38fd1d85d",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          443,
+          437,
+          568,
+          614
+        ],
+        [
+          639,
+          370,
+          791,
+          576
+        ],
+        [
+          458,
+          191,
+          632,
+          430
+        ],
+        [
+          125,
+          251,
+          243,
+          365
+        ]
+      ],
+      "gt_areas": [
+        16916,
+        23969,
+        30653,
+        9861
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "526",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/526.png",
+      "images": {
+        "raw": "data/frames/526.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/526.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/526.png",
+      "label_sha256": "6d3e543e01b1ffbf9091c79368ff334e31182eb805e5dfd7d84201e4aa692d3d",
+      "frame_sha256": "88b9920ab17665e1fa0a221de5daf60db8584e962e5d0b0ce096e224e623c376",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          984,
+          63,
+          1008,
+          105
+        ],
+        [
+          515,
+          306,
+          626,
+          456
+        ],
+        [
+          446,
+          248,
+          526,
+          346
+        ],
+        [
+          397,
+          200,
+          460,
+          267
+        ],
+        [
+          289,
+          267,
+          447,
+          480
+        ]
+      ],
+      "gt_areas": [
+        504,
+        11455,
+        5570,
+        1703,
+        22032
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "533",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/533.png",
+      "images": {
+        "raw": "data/frames/533.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/533.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/533.png",
+      "label_sha256": "d4d3cd439fdcc92539c827f47c079e527da631885f8c816eedf770eabce0124e",
+      "frame_sha256": "21c83ff6cbe1f6e6fc8dc75ea130974b216cf4d5c82229495fddea9db01a28ac",
+      "n_gt": 6,
+      "gt_boxes": [
+        [
+          964,
+          69,
+          1008,
+          104
+        ],
+        [
+          425,
+          332,
+          521,
+          460
+        ],
+        [
+          444,
+          405,
+          498,
+          464
+        ],
+        [
+          316,
+          204,
+          465,
+          355
+        ],
+        [
+          214,
+          326,
+          302,
+          423
+        ],
+        [
+          160,
+          117,
+          202,
+          162
+        ]
+      ],
+      "gt_areas": [
+        884,
+        5150,
+        2375,
+        17197,
+        6357,
+        1456
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "544",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/544.png",
+      "images": {
+        "raw": "data/frames/544.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/544.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/544.png",
+      "label_sha256": "b531f8ade7cb6098849c49b78991c1677debafae8d6414a26f0539fbe9daaf42",
+      "frame_sha256": "f715fe659ef812fff39e5b15a02de31420f37137aced24282b41dbcf8071808e",
+      "n_gt": 13,
+      "gt_boxes": [
+        [
+          758,
+          431,
+          797,
+          476
+        ],
+        [
+          664,
+          326,
+          750,
+          473
+        ],
+        [
+          564,
+          322,
+          675,
+          481
+        ],
+        [
+          565,
+          413,
+          630,
+          505
+        ],
+        [
+          501,
+          338,
+          567,
+          428
+        ],
+        [
+          455,
+          312,
+          519,
+          407
+        ],
+        [
+          403,
+          213,
+          481,
+          284
+        ],
+        [
+          881,
+          62,
+          911,
+          92
+        ],
+        [
+          172,
+          316,
+          217,
+          365
+        ],
+        [
+          195,
+          187,
+          263,
+          245
+        ],
+        [
+          279,
+          91,
+          395,
+          166
+        ],
+        [
+          348,
+          38,
+          431,
+          92
+        ],
+        [
+          481,
+          5,
+          510,
+          30
+        ]
+      ],
+      "gt_areas": [
+        435,
+        8906,
+        11730,
+        1646,
+        3186,
+        4885,
+        3562,
+        536,
+        1636,
+        2898,
+        6661,
+        3023,
+        458
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "567",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/567.png",
+      "images": {
+        "raw": "data/frames/567.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/567.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/567.png",
+      "label_sha256": "9eaee36f584cf24c2d09df3663fda9428814fc7832da473d52578e7f310d3af5",
+      "frame_sha256": "49395a66346aacb0d59c2bc140efc483a73635adf8e3eade362ad36aa2146696",
+      "n_gt": 4,
+      "gt_boxes": [
+        [
+          379,
+          219,
+          521,
+          339
+        ],
+        [
+          209,
+          230,
+          355,
+          363
+        ],
+        [
+          153,
+          432,
+          249,
+          556
+        ],
+        [
+          142,
+          216,
+          201,
+          277
+        ]
+      ],
+      "gt_areas": [
+        12791,
+        10139,
+        8575,
+        2364
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "587",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/587.png",
+      "images": {
+        "raw": "data/frames/587.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/587.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/587.png",
+      "label_sha256": "e6e82dd1d627bae848c27ac0095cc7f5ecc114b8bfe858984894be06b2e744d9",
+      "frame_sha256": "ea302a55ffc8e6fd4e8a10746d95d74f06ddd7f61f30eabc5341b3220adb9054",
+      "n_gt": 7,
+      "gt_boxes": [
+        [
+          515,
+          395,
+          552,
+          433
+        ],
+        [
+          531,
+          318,
+          573,
+          355
+        ],
+        [
+          441,
+          302,
+          506,
+          391
+        ],
+        [
+          840,
+          194,
+          969,
+          266
+        ],
+        [
+          698,
+          142,
+          875,
+          252
+        ],
+        [
+          737,
+          127,
+          793,
+          148
+        ],
+        [
+          868,
+          170,
+          908,
+          193
+        ]
+      ],
+      "gt_areas": [
+        1025,
+        1148,
+        3908,
+        5988,
+        14567,
+        784,
+        546
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "66",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/66.png",
+      "images": {
+        "raw": "data/frames/66.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/66.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/66.png",
+      "label_sha256": "7bdaad30ce6d1f659effa7c61ca964ee8ad3899d5704a40f0644f3fea74ab0de",
+      "frame_sha256": "86abdd191762e6e0746de010173fa0c2fe0916a85b9d50f2321765f0c85db634",
+      "n_gt": 2,
+      "gt_boxes": [
+        [
+          701,
+          152,
+          869,
+          334
+        ],
+        [
+          567,
+          335,
+          629,
+          416
+        ]
+      ],
+      "gt_areas": [
+        23665,
+        3514
+      ],
+      "gt_instance_ids": [
+        1,
+        2
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "678",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/678.png",
+      "images": {
+        "raw": "data/frames/678.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/678.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/678.png",
+      "label_sha256": "5c1fac19996b29ec9bc1c1bde4390260a38122b08f1cd01428d8a27311288892",
+      "frame_sha256": "e03f6a810ba502835914c9b1e89f37fc7f2bad4238596c8e18c94ac501962388",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          955,
+          0,
+          1008,
+          41
+        ],
+        [
+          829,
+          213,
+          874,
+          247
+        ],
+        [
+          680,
+          278,
+          809,
+          455
+        ],
+        [
+          587,
+          198,
+          729,
+          379
+        ],
+        [
+          504,
+          322,
+          651,
+          532
+        ]
+      ],
+      "gt_areas": [
+        1604,
+        853,
+        15602,
+        19194,
+        21242
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "7",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/7.png",
+      "images": {
+        "raw": "data/frames/7.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/7.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/7.png",
+      "label_sha256": "940d28da735c7387cf329a720646745eaeb617c1d9eb60762a669912c3860dce",
+      "frame_sha256": "1a610ac68fee0be419d3c01245759f4b2356186a70d24f5a1f0c0678ddeb76a3",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          631,
+          376,
+          784,
+          561
+        ],
+        [
+          490,
+          186,
+          642,
+          303
+        ],
+        [
+          330,
+          305,
+          476,
+          476
+        ],
+        [
+          297,
+          127,
+          356,
+          186
+        ],
+        [
+          179,
+          290,
+          217,
+          329
+        ]
+      ],
+      "gt_areas": [
+        21318,
+        13064,
+        18473,
+        2538,
+        1022
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "710",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/710.png",
+      "images": {
+        "raw": "data/frames/710.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/710.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/710.png",
+      "label_sha256": "a6d6074f9c67764bc61e8b3d53284774a4454dc9821889bbbae3fc24287bc6cb",
+      "frame_sha256": "2aaecafa0b887b6b291b7e812e197cee19154cf20ef417762663318da57a62cb",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          742,
+          59,
+          793,
+          100
+        ],
+        [
+          897,
+          139,
+          975,
+          189
+        ],
+        [
+          506,
+          492,
+          573,
+          591
+        ],
+        [
+          467,
+          524,
+          552,
+          640
+        ],
+        [
+          365,
+          268,
+          480,
+          390
+        ]
+      ],
+      "gt_areas": [
+        1053,
+        2261,
+        4784,
+        5979,
+        10296
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "745",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/745.png",
+      "images": {
+        "raw": "data/frames/745.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/745.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/745.png",
+      "label_sha256": "a146742dfa54cf37ee2e4062906e6226771d6e939338a1956dc27dcd7b05f7bc",
+      "frame_sha256": "87efe7af2a8d780b6770060e48b352a5f575f7aa0adee1db3fbbe020cd685b31",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          759,
+          314,
+          857,
+          405
+        ],
+        [
+          655,
+          355,
+          805,
+          515
+        ],
+        [
+          510,
+          327,
+          654,
+          527
+        ],
+        [
+          652,
+          87,
+          729,
+          204
+        ],
+        [
+          370,
+          175,
+          427,
+          249
+        ]
+      ],
+      "gt_areas": [
+        3778,
+        15144,
+        13965,
+        4236,
+        3295
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "759",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/759.png",
+      "images": {
+        "raw": "data/frames/759.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/759.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/759.png",
+      "label_sha256": "8f85d2df5dc5a76368887270d6eaf6a1011e390be908efafed6f2d15794bea5d",
+      "frame_sha256": "335ae0efde0ed466a25b1f6e9b0a2daa462726f1ccdb9b059cc794da46f235e4",
+      "n_gt": 8,
+      "gt_boxes": [
+        [
+          746,
+          291,
+          856,
+          414
+        ],
+        [
+          607,
+          81,
+          653,
+          127
+        ],
+        [
+          415,
+          399,
+          583,
+          652
+        ],
+        [
+          442,
+          244,
+          544,
+          360
+        ],
+        [
+          281,
+          213,
+          437,
+          360
+        ],
+        [
+          397,
+          122,
+          464,
+          183
+        ],
+        [
+          467,
+          1,
+          488,
+          17
+        ],
+        [
+          469,
+          32,
+          493,
+          63
+        ]
+      ],
+      "gt_areas": [
+        8686,
+        1440,
+        29236,
+        9329,
+        17440,
+        2606,
+        219,
+        445
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "821",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/821.png",
+      "images": {
+        "raw": "data/frames/821.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/821.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/821.png",
+      "label_sha256": "19a1e2ec8c1c7a0157b521da72fde53619ae1e9a62be553e0a34a885e6ac9a01",
+      "frame_sha256": "b465c327a1b239ffd1590722872cc645ca291efa7689c77703168062eb39632a",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          597,
+          339,
+          693,
+          472
+        ],
+        [
+          451,
+          322,
+          581,
+          510
+        ],
+        [
+          377,
+          409,
+          488,
+          579
+        ],
+        [
+          54,
+          187,
+          99,
+          237
+        ],
+        [
+          0,
+          3,
+          35,
+          105
+        ]
+      ],
+      "gt_areas": [
+        9141,
+        16767,
+        13117,
+        1661,
+        2533
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "824",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/824.png",
+      "images": {
+        "raw": "data/frames/824.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/824.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/824.png",
+      "label_sha256": "b9eeafa88c7f18ee5ea17b4623914fef0c237caef3de069e5b34cbc392082ca7",
+      "frame_sha256": "fff0450827b6b39967f37464a0160342f226e6a0c10d161650ac9f6996507c40",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          516,
+          196,
+          669,
+          407
+        ],
+        [
+          221,
+          94,
+          453,
+          419
+        ],
+        [
+          175,
+          330,
+          253,
+          414
+        ]
+      ],
+      "gt_areas": [
+        22816,
+        52844,
+        4302
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "856",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/856.png",
+      "images": {
+        "raw": "data/frames/856.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/856.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/856.png",
+      "label_sha256": "d4ea724ecfca9c864ef8267a450868e87a01f646784d66977ca4673375e36ea8",
+      "frame_sha256": "089ee36cdae82c7199490b934f8ce6c1add718d12cc4463fe3c845fbc3931102",
+      "n_gt": 5,
+      "gt_boxes": [
+        [
+          642,
+          73,
+          661,
+          104
+        ],
+        [
+          533,
+          181,
+          690,
+          400
+        ],
+        [
+          466,
+          142,
+          578,
+          281
+        ],
+        [
+          472,
+          306,
+          550,
+          376
+        ],
+        [
+          299,
+          278,
+          478,
+          455
+        ]
+      ],
+      "gt_areas": [
+        227,
+        19151,
+        11831,
+        1490,
+        21911
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "878",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/878.png",
+      "images": {
+        "raw": "data/frames/878.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/878.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/878.png",
+      "label_sha256": "0c2e0152fa7bc6042499e2ab830b7fd01b38db70c4fdc860ae82323fb53869fb",
+      "frame_sha256": "81bd6ba4da2067e6f43366c3e6b06f82bb12414abd0c091238854e0ace649f3b",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          646,
+          126,
+          710,
+          193
+        ],
+        [
+          354,
+          273,
+          539,
+          563
+        ],
+        [
+          277,
+          156,
+          425,
+          332
+        ]
+      ],
+      "gt_areas": [
+        2954,
+        32803,
+        14529
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "891",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/891.png",
+      "images": {
+        "raw": "data/frames/891.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/891.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/891.png",
+      "label_sha256": "c1af32506ce7774f80cc08ed9b45f8a8ac3481390e1df4021d45f9a036b0ec54",
+      "frame_sha256": "644fd2405b28340a91bf0e0a1dc2ef36fca3868904c5198598177aca4664f590",
+      "n_gt": 1,
+      "gt_boxes": [
+        [
+          587,
+          131,
+          759,
+          270
+        ]
+      ],
+      "gt_areas": [
+        15463
+      ],
+      "gt_instance_ids": [
+        1
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "896",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/896.png",
+      "images": {
+        "raw": "data/frames/896.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/896.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/896.png",
+      "label_sha256": "713eb655fcd5bd603590edc097237e07b8325a27c668c93f35e11a6261edfddb",
+      "frame_sha256": "dafe638c1e6453f7632183f292fb25a913a5ebcabf1f9769b4e6d1f4def7171e",
+      "n_gt": 1,
+      "gt_boxes": [
+        [
+          596,
+          164,
+          724,
+          296
+        ]
+      ],
+      "gt_areas": [
+        12358
+      ],
+      "gt_instance_ids": [
+        1
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "916",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/916.png",
+      "images": {
+        "raw": "data/frames/916.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/916.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/916.png",
+      "label_sha256": "d845102ef0b280557799b1e5fd8aea6f27e2d36bf1a6082405b8e4ba38eef065",
+      "frame_sha256": "6a84544dcecfb3d62262db863f405a37a5d6259afdd1dc51f87e8331967029d7",
+      "n_gt": 10,
+      "gt_boxes": [
+        [
+          938,
+          93,
+          972,
+          118
+        ],
+        [
+          941,
+          11,
+          1008,
+          92
+        ],
+        [
+          952,
+          0,
+          968,
+          17
+        ],
+        [
+          873,
+          113,
+          900,
+          130
+        ],
+        [
+          598,
+          264,
+          716,
+          380
+        ],
+        [
+          422,
+          318,
+          569,
+          489
+        ],
+        [
+          378,
+          304,
+          409,
+          341
+        ],
+        [
+          333,
+          111,
+          438,
+          251
+        ],
+        [
+          126,
+          126,
+          176,
+          184
+        ],
+        [
+          127,
+          63,
+          160,
+          104
+        ]
+      ],
+      "gt_areas": [
+        607,
+        4165,
+        153,
+        231,
+        10420,
+        18635,
+        724,
+        10854,
+        1761,
+        722
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "949",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/949.png",
+      "images": {
+        "raw": "data/frames/949.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/949.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/949.png",
+      "label_sha256": "c115855f8312777aeb962a19d2f5333ade5151dc5cb49febf244f2ae1bca3538",
+      "frame_sha256": "504287545845efea08215003096c09af71bb2744bf3ee5b40b446202bcc5804d",
+      "n_gt": 12,
+      "gt_boxes": [
+        [
+          999,
+          66,
+          1008,
+          96
+        ],
+        [
+          582,
+          0,
+          601,
+          6
+        ],
+        [
+          251,
+          141,
+          271,
+          171
+        ],
+        [
+          0,
+          246,
+          22,
+          262
+        ],
+        [
+          836,
+          332,
+          888,
+          377
+        ],
+        [
+          795,
+          210,
+          845,
+          250
+        ],
+        [
+          570,
+          220,
+          743,
+          308
+        ],
+        [
+          646,
+          122,
+          784,
+          211
+        ],
+        [
+          591,
+          123,
+          657,
+          177
+        ],
+        [
+          416,
+          426,
+          446,
+          465
+        ],
+        [
+          421,
+          356,
+          467,
+          419
+        ],
+        [
+          174,
+          243,
+          271,
+          417
+        ]
+      ],
+      "gt_areas": [
+        166,
+        93,
+        385,
+        159,
+        1655,
+        1501,
+        12097,
+        9355,
+        2178,
+        693,
+        2238,
+        12554
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    },
+    {
+      "sample_id": "967",
+      "source": "strawdi_val",
+      "split": "val",
+      "has_gt": true,
+      "task": "full_inventory",
+      "image": "data/frames/967.png",
+      "images": {
+        "raw": "data/frames/967.png"
+      },
+      "image_shape_hw": [
+        756,
+        1008
+      ],
+      "source_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/img/967.png",
+      "source_image_shape_hw": [
+        756,
+        1008
+      ],
+      "downscaled": false,
+      "label_image": "/media/zfei/GLOWAY/strawberry_detection/StrawDI_Db1/val/label/967.png",
+      "label_sha256": "7ebad3bf0f6745549e6ba4bfd54179b2bcf56c522394c85501b57d502b055d0d",
+      "frame_sha256": "30a1a772948ce7708184f48aa33fa4d5a260327d2cd0bcb87608f768bbd30b82",
+      "n_gt": 3,
+      "gt_boxes": [
+        [
+          406,
+          184,
+          605,
+          437
+        ],
+        [
+          335,
+          393,
+          506,
+          641
+        ],
+        [
+          192,
+          333,
+          320,
+          456
+        ]
+      ],
+      "gt_areas": [
+        35247,
+        30864,
+        11707
+      ],
+      "gt_instance_ids": [
+        1,
+        2,
+        3
+      ],
+      "label_provenance": {
+        "method": "tight axis-aligned bbox of the instance's mask pixels, half-open [x1, y1, x2, y2): x2 = mask_xmax + 1, y2 = mask_ymax + 1, so pixel extent and box extent agree",
+        "min_instance_area_px": null,
+        "note": "every instance in the mask is kept, however small; areas are recorded so metrics can stratify by size"
+      }
+    }
+  ]
+}

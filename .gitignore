@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Eval run outputs (large, regenerable)
+runs/
+vlm_eval/runs/
+strawdi_eval/runs/
+
+# Downloaded dataset (StrawDI_Db1 — re-downloadable, ~139 MB)
+strawdi_eval/data/
+
+# Model weights (large binaries)
+weights/
+*.pt
+
+# Agent scratch dirs — harness creates them, must stay empty
+vlm_eval/agent_cwd/
+strawdi_eval/agent_cwd/
+
+# Local tool settings
+.claude/settings.local.json
+
+# OS / editor junk
+.DS_Store
+*.swp

@@ -1,0 +1,72 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["strawberries", "target_index"],
+  "properties": {
+    "strawberries": {
+      "type": "array",
+      "description": "EVERY strawberry visible in the image, ripe or not, including partially occluded ones.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bbox", "redness_pct", "occlusion_pct",
+                     "calyx_visible", "peduncle_visible", "graspable",
+                     "picking_point", "confidence_pct"],
+        "properties": {
+          "bbox": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Bounding box [x1, y1, x2, y2] of the whole fruit, including the parts hidden behind leaves or other fruit.",
+            "items": {"type": "integer"}
+          },
+          "redness_pct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Continuous estimate, 0-100, of how red the fruit's VISIBLE surface is. No categories: 0 = no red at all (green/white), 50 = about half the visible surface is red, 100 = fully saturated red everywhere. Use intermediate values freely."
+          },
+          "occlusion_pct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Continuous estimate, 0-100, of how much of the fruit is hidden behind leaves, stems or other fruit. 0 = fully visible, 50 = about half hidden, 100 = only a sliver shows. Use intermediate values freely."
+          },
+          "calyx_visible": {
+            "type": "boolean",
+            "description": "True if the green calyx (sepal ring) is visible."
+          },
+          "peduncle_visible": {
+            "type": "boolean",
+            "description": "True if the peduncle (stem) is visible where it meets the fruit."
+          },
+          "graspable": {
+            "type": "boolean",
+            "description": "True if this fruit could be picked right now from what is visible."
+          },
+          "picking_point": {
+            "type": ["array", "null"],
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "Grasp point [u, v] on the peduncle just above the calyx, or null if the peduncle is not visible.",
+            "items": {"type": "integer"}
+          },
+          "confidence_pct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "How confident you are that this is a strawberry."
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional short free-text description of this fruit - its colour and colour pattern, what is occluding it and where, size, position on the plant, or anything else useful. One or two sentences."
+          }
+        }
+      }
+    },
+    "target_index": {
+      "type": "integer",
+      "description": "0-based index into 'strawberries' of the single fruit you would pick right now, or -1 if none is ready."
+    }
+  }
+}
