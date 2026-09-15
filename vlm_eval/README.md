@@ -171,7 +171,7 @@ strawberry, so the final tip pose *is* the picking location.
 rendered marker's top edge sits on the picking point (the upstream convention: a
 rough 60×60 box centred 30 px below it).
 
-**How to read an overlay** (`runs/<ts>/overlays/*.png`):
+**How to read an overlay** (`runs/<ts>/overlays/*.jpg`, PNG in older runs):
 
 | marking | meaning |
 | --- | --- |

@@ -58,7 +58,7 @@ from vlm_eval import prompts  # noqa: E402
 # which model answered, and at what reasoning effort, so a number can never be
 # detached from the code and configuration that generated it.
 HARNESS_NAME = "vlm_eval"
-HARNESS_VERSION = "1.2.0"
+HARNESS_VERSION = "1.2.1"
 
 # Default evaluation scope. The SROI wrist-camera sources (validation / occluded)
 # are still built by build_manifest.py and still supported, but they are not
@@ -1091,7 +1091,7 @@ def run_one(args, manifest, style, sample, run_ctx) -> dict:
 
     title = (f"{style.name} | {sample['sample_id']} | {sample['episode']} | "
              f"{scored['status']}")
-    rel = Path("overlays") / f"{stem}.png"
+    rel = Path("overlays") / f"{stem}.jpg"
     try:
         raw = imaging.load_rgb(HERE / sample["images"]["raw"])
         if has_gt:
@@ -1104,7 +1104,7 @@ def run_one(args, manifest, style, sample, run_ctx) -> dict:
                 raw, berries, scored.get("target_index"), title)
         else:
             overlay = imaging.draw_multi_overlay(raw, berries, title)
-        imaging.save_rgb(overlay, run_ctx["run_dir"] / rel)
+        imaging.save_jpg(overlay, run_ctx["run_dir"] / rel)
         record["overlay"] = str(rel)
     except Exception as exc:  # a drawing bug must not throw away a paid-for answer
         record["overlay"] = None
@@ -1458,7 +1458,7 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
                 f"{row['status']} | {pred_s} | ({gtuv[0]:.1f}, {gtuv[1]:.1f}) | "
                 f"{fmt(row['error_px'],1)} | {fmt(row['dx_px'],1)} | {fmt(row['dy_px'],1)} | "
                 f"{attempts} | {int(row['total_tokens'])} | {fmt(row['wall_s'],1)} | "
-                f"[png]({row['overlay']}) |")
+                f"[jpg]({row['overlay']}) |")
         add("")
 
     # ---- tokens -----------------------------------------------------------
@@ -1516,7 +1516,7 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
             "never hide the reference.")
         add("")
         for style in prompts_used:
-            sheet = Path("contact_sheets") / f"{style}.png"
+            sheet = Path("contact_sheets") / f"{style}.jpg"
             if (run_dir / sheet).exists():
                 add(f"### `{style}`")
                 add("")
@@ -1585,10 +1585,10 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
             "**not** find are simply absent — the boxes cover only what it reported.")
         add("")
         for style in list(dict.fromkeys(inv["style"])):
-            for sheet, label in ((Path("contact_sheets") / f"{style}.png",
+            for sheet, label in ((Path("contact_sheets") / f"{style}.jpg",
                                   "frames with ground truth (cyan = nominated target, "
                                   "cyan crosshair = ground truth)"),
-                                 (Path("contact_sheets") / f"{style}__unlabelled.png",
+                                 (Path("contact_sheets") / f"{style}__unlabelled.jpg",
                                   "unlabelled multi-strawberry frames")):
                 if not (run_dir / sheet).exists():
                     continue
@@ -1656,8 +1656,8 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
             "predicted fruit; nothing here is ground truth):")
         add("")
         for style in [s for s in prompts_used
-                      if (run_dir / "contact_sheets" / f"{s}__unlabelled.png").exists()]:
-            sheet = Path("contact_sheets") / f"{style}__unlabelled.png"
+                      if (run_dir / "contact_sheets" / f"{s}__unlabelled.jpg").exists()]:
+            sheet = Path("contact_sheets") / f"{style}__unlabelled.jpg"
             add(f"### `{style}`")
             add("")
             add(f"[full-size contact sheet]({sheet})")
@@ -1730,7 +1730,9 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
     add("## Exact prompts used")
     add("")
     for style, text in prompts_used.items():
-        spec = prompts.STYLES[style]
+        # style_by_name, not STYLES[...]: a run may legitimately contain
+        # archived styles or pre-rename aliases, and the report must rebuild.
+        spec = prompts.style_by_name(style)
         add(f"### `{style}`")
         add("")
         add(f"_{spec.summary}_ · input: `{spec.image_kind}` · "
@@ -1928,8 +1930,8 @@ def write_artifacts(run_dir: Path, args, manifest, control, records: list[dict],
         else:
             overlay = imaging.draw_multi_overlay(
                 raw, record.get("strawberries"), title)
-        rel = Path("overlays") / f"{record['run_id']}.png"
-        imaging.save_rgb(overlay, run_dir / rel)
+        rel = Path("overlays") / f"{record['run_id']}.jpg"
+        imaging.save_jpg(overlay, run_dir / rel)
         record["overlay"] = str(rel)
 
     with (run_dir / "responses.jsonl").open("w") as handle:
@@ -1963,7 +1965,7 @@ def write_artifacts(run_dir: Path, args, manifest, control, records: list[dict],
         images = [imaging.load_rgb(run_dir / rel) for rel in subset["overlay"]]
         sheet = imaging.contact_sheet(images, list(subset["sample_id"]),
                                       cols=min(3, len(images)))
-        imaging.save_rgb(sheet, run_dir / "contact_sheets" / f"{style}.png")
+        imaging.save_jpg(sheet, run_dir / "contact_sheets" / f"{style}.jpg")
 
     # Unlabelled runs get their own sheets: they are much larger frames and carry
     # no reference markers, so mixing them with the scored overlays would be
@@ -1975,7 +1977,7 @@ def write_artifacts(run_dir: Path, args, manifest, control, records: list[dict],
         images = [imaging.load_rgb(run_dir / rel) for rel in subset["overlay"]]
         sheet = imaging.contact_sheet(images, list(subset["sample_id"]),
                                       cols=min(2, len(images)))
-        imaging.save_rgb(sheet, run_dir / "contact_sheets" / f"{style}__unlabelled.png")
+        imaging.save_jpg(sheet, run_dir / "contact_sheets" / f"{style}__unlabelled.jpg")
 
     histogram_ok = error_histogram(df[has_gt_col] if "has_gt" in df.columns else df,
                                    run_dir / "error_histogram.png")

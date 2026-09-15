@@ -54,7 +54,7 @@ from strawdi_eval.lib import prompt as strawdi_prompt  # noqa: E402
 from strawdi_eval.lib import render, scoring  # noqa: E402
 
 HARNESS_NAME = "strawdi_eval"
-HARNESS_VERSION = "0.2.2"
+HARNESS_VERSION = "0.2.4"
 
 # The pipeline's single prompt and its answer schema: the base harness's
 # unbiased inventory, detection-only — eight per-fruit fields, no picking
@@ -377,13 +377,13 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
     }
 
     title = f"{STYLE_NAME} | {sample['sample_id']} | {sample['n_gt']}gt | {scored['status']}"
-    rel = Path("overlays") / f"{stem}.png"
+    rel = Path("overlays") / f"{stem}.jpg"
     try:
         raw = imaging.load_rgb(image)
         overlay = render.draw_detection_overlay(
             raw, inventory, sample["gt_boxes"],
             record["matches_50"], record["fn_gt_indices_50"], title)
-        imaging.save_rgb(overlay, run_ctx["run_dir"] / rel)
+        imaging.save_jpg(overlay, run_ctx["run_dir"] / rel)
         record["overlay"] = str(rel)
     except Exception as exc:  # a drawing bug must not throw away a paid-for answer
         record["overlay"] = None
@@ -557,14 +557,14 @@ def _render_all(run_dir: Path, records: list[dict]) -> None:
         sample_id = record["sample_id"]
         title = (f"{record['style']} | {sample_id} | "
                  f"{record.get('n_gt')}gt | {record['status']}")
-        rel = Path("overlays") / f"{record['run_id']}.png"
+        rel = Path("overlays") / f"{record['run_id']}.jpg"
         try:
             raw = imaging.load_rgb(HERE / record["image"])
             overlay = render.draw_detection_overlay(
                 raw, record.get("inventory"),
                 record.get("gt_boxes"), record.get("matches_50"),
                 record.get("fn_gt_indices_50"), title)
-            imaging.save_rgb(overlay, run_dir / rel)
+            imaging.save_jpg(overlay, run_dir / rel)
             record["overlay"] = str(rel)
             record.pop("render_error", None)
         except Exception as exc:
@@ -578,7 +578,7 @@ def _render_all(run_dir: Path, records: list[dict]) -> None:
         images = [imaging.load_rgb(path) for _, path in chunk]
         titles = [rec["sample_id"] for rec, _ in chunk]
         sheet = imaging.contact_sheet(images, titles, cols=3)
-        imaging.save_rgb(sheet, sheets / f"sheet_{start // CONTACT_SHEET_CHUNK + 1:02d}.png")
+        imaging.save_jpg(sheet, sheets / f"sheet_{start // CONTACT_SHEET_CHUNK + 1:02d}.jpg")
 
     # Miss gallery: the images where the most GT area went unfound.
     misses = sorted((r for r in records if r.get("fn_gt_areas_50")),
@@ -588,10 +588,10 @@ def _render_all(run_dir: Path, records: list[dict]) -> None:
         images = [imaging.load_rgb(run_dir / r["overlay"]) for r in misses
                   if r.get("overlay")]
         if images:
-            imaging.save_rgb(imaging.contact_sheet(
+            imaging.save_jpg(imaging.contact_sheet(
                 images, [f"{r['sample_id']} miss{len(r['fn_gt_areas_50'])}"
                          for r in misses if r.get("overlay")], cols=3),
-                sheets / "miss_gallery.png")
+                sheets / "miss_gallery.jpg")
 
 
 def write_report(run_dir: Path, args, manifest, control, records: list[dict],
@@ -793,10 +793,13 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
 
     # Overlays
     add("## Overlays")
-    add("Per-run overlays in `overlays/` (green = GT box — a missed one carries "
-        "a red `MISS` label below it, redness-ramp = predictions with white TP "
-        "corner ticks); contact sheets in `contact_sheets/` (chunks of 24) and "
-        "`contact_sheets/miss_gallery.png`.")
+    add("Per-run overlays in `overlays/` (white = GT box — a missed one carries "
+        "a red `MISS` label below it; green = prediction matched as TP, red = "
+        "unmatched prediction (FP); label text takes its box colour except the "
+        "`red xx%` segment, which is redness-coloured; small legend at the "
+        "bottom-left); contact sheets in `contact_sheets/` (chunks of 24) and "
+        "`contact_sheets/miss_gallery.jpg`. Overlays and sheets are JPG "
+        "(quality 90); the model inputs are untouched PNG.")
     add("")
 
     # Exact prompt

@@ -148,10 +148,14 @@ strata, occlusion diagnostic, per-image table, error analysis, provenance) ·
 `responses.jsonl` (raw + parsed answers, usage, prompt, full detection block —
 GT boxes ride inside each record so `--rebuild-report` re-scores without the
 dataset) · `metrics.csv` / `detection_summary.csv` / `size_strata.csv` /
-`ap.csv` · per-frame overlays (green = GT box — a missed one carries a red
-`MISS` label below it, redness-ramp = predictions, white corner ticks = TP)
-· chunked contact sheets + `miss_gallery.png` · `manifest.json` +
-`catalog.json` provenance snapshots · `control.json`.
+`ap.csv` · per-frame overlays (white = GT box — a missed one carries a red
+`MISS` label below it; green = TP prediction, red = FP prediction; label text
+takes its box colour except the redness-coloured `red xx%` segment; small
+GT/TP/FP legend bottom-left)
+· chunked contact sheets + `miss_gallery.jpg` · `manifest.json` +
+`catalog.json` provenance snapshots · `control.json`. Overlays and sheets are
+saved as JPG (quality 90, 4:4:4) since 2026-09-15; model inputs, label masks
+and the synthetic control stay PNG.
 
 ## 6. Reference points (examples, not the contract)
 

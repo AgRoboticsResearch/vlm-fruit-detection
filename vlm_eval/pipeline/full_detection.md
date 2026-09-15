@@ -73,7 +73,9 @@ nominated fruit has no visible peduncle → answer kept, no point scored) ·
 **Artefacts per run** (`vlm_eval/runs/<timestamp>-<model>-<effort>-<cli>-vlm_eval[-tag]/`):
 `report.md`, `responses.jsonl` (raw + parsed answers, usage, prompt),
 `metrics.csv`, per-frame overlays + contact sheets (redness-ramp boxes, cyan =
-nominated target), `manifest.json` + `catalog.json` provenance snapshots.
+nominated target; overlays and sheets are saved as JPG quality 90 since
+2026-09-15, model inputs stay PNG), `manifest.json` + `catalog.json`
+provenance snapshots.
 
 ## 3. How to run it (any model, any CLI harness)
 

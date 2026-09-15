@@ -5,7 +5,8 @@ Everything asserted here is a property the harness promises, so this is the
 thing to run after a batch (and after any change to the harness):
 
 * the control reported image delivery, or the report says the batch is invalid
-* every model call has a parsed-or-explicitly-failed status, an overlay PNG, a
+* every model call has a parsed-or-explicitly-failed status, an overlay image
+* (JPG since the 2026-09-15 format change; older runs carry PNG), a
   JSONL record and a token count
 * no record leaks SROI picking-point fields (there is no such ground truth in
   StrawDI, so a stray value would be nonsense)
@@ -105,7 +106,7 @@ def main() -> int:
     missing_overlay = [r["run_id"] for r in records
                        if not r.get("overlay") or not (run_dir / r["overlay"]).exists()]
     c.check(not missing_overlay,
-            f"every run has an overlay PNG (missing: {missing_overlay})")
+            f"every run has an overlay image (missing: {missing_overlay})")
 
     broken = []
     for record in records:

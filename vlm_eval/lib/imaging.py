@@ -51,6 +51,20 @@ def save_rgb(image_rgb: np.ndarray, path: Path | str) -> None:
     Image.fromarray(np.asarray(image_rgb, dtype=np.uint8)).save(path)
 
 
+def save_jpg(image_rgb: np.ndarray, path: Path | str, quality: int = 90) -> None:
+    """Save a rendered diagnostic (overlay / contact sheet) as JPG.
+
+    These are photographs with text on top, so JPG at quality 90 with 4:4:4
+    chroma keeps the labels crisp at a small fraction of the PNG size. Model
+    inputs, the synthetic control and anything derived from label masks stay
+    PNG via save_rgb.
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(np.asarray(image_rgb, dtype=np.uint8)).save(
+        path, format="JPEG", quality=quality, subsampling=0, optimize=True)
+
+
 def _text(draw: ImageDraw.ImageDraw, xy, text, size=14, fill=(255, 255, 255),
           anchor="la", bold=True, halo=(0, 0, 0)):
     """Draw text with a 1-2 px dark halo so it stays readable on any background."""

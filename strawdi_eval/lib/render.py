@@ -3,13 +3,16 @@
 
 Never fed to the model — these are the after-the-fact overlays that pair the
 model's inventory with the mask-derived ground truth. Reuses the base
-conventions of ``vlm_eval/lib/imaging.py`` (redness-ramp prediction boxes,
-header strip) and adds the GT layer:
+conventions of ``vlm_eval/lib/imaging.py`` (redness colour ramp, header strip)
+and draws a match-coloured detection layer:
 
-* green thin box   – a ground-truth strawberry (visible-surface mask extent);
+* white thin box   – a ground-truth strawberry (visible-surface mask extent);
   one the model missed carries a red ``MISS`` label under it (no extra box)
-* white corner ticks – a prediction that matched a GT box at IoU >= 0.5 (TP)
-* ``FP`` label     – a prediction that matched nothing
+* green box        – a prediction that matched a GT box at IoU >= 0.5 (TP)
+* red box          – a prediction that matched nothing (FP)
+* label text       – same colour as its box, except the ``red xx%`` segment,
+  which is coloured by that fruit's reported redness
+* small legend     – bottom-left swatches: GT / TP / FP
 """
 
 from __future__ import annotations
@@ -19,9 +22,9 @@ from PIL import Image, ImageDraw
 
 from vlm_eval.lib import imaging
 
-GT_COLOR = (60, 230, 90)        # green – ground-truth box (missed or not)
-MISS_COLOR = (255, 60, 60)      # red   – colour of the MISS text label
-TICK_COLOR = (255, 255, 255)    # white – TP corner ticks
+GT_COLOR = (255, 255, 255)      # white – ground-truth box (missed or not)
+TP_COLOR = (60, 230, 90)        # green – prediction that matched a GT box
+FP_COLOR = (255, 60, 60)        # red   – unmatched prediction; also MISS text
 
 
 def _text(draw: ImageDraw.ImageDraw, xy, text, size=14, fill=(255, 255, 255),
@@ -34,13 +37,45 @@ def _text(draw: ImageDraw.ImageDraw, xy, text, size=14, fill=(255, 255, 255),
     draw.text(xy, text, font=fnt, fill=fill, anchor=anchor)
 
 
-def _corner_ticks(draw: ImageDraw.ImageDraw, box, length: int, width: int,
-                  colour=TICK_COLOR):
-    x1, y1, x2, y2 = box
-    for cx, cy, dx, dy in ((x1, y1, 1, 1), (x2, y1, -1, 1),
-                           (x1, y2, 1, -1), (x2, y2, -1, -1)):
-        draw.line([(cx, cy), (cx + dx * length, cy)], fill=colour, width=width)
-        draw.line([(cx, cy), (cx, cy + dy * length)], fill=colour, width=width)
+def _text_segments(draw: ImageDraw.ImageDraw, xy, segments, size: int = 14):
+    """Left-to-right haloed text where each segment keeps its own colour.
+
+    All halos are drawn before any fill so one segment's halo cannot eat the
+    previous segment's glyphs at the seam.
+    """
+    fnt = imaging.font(size, bold=True)
+    widths = [draw.textlength(text, font=fnt) for text, _ in segments]
+    x = xy[0]
+    for (text, _), width in zip(segments, widths):
+        for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1), (-2, 0), (2, 0), (0, -2), (0, 2)):
+            draw.text((x + dx, xy[1] + dy), text, font=fnt, fill=(0, 0, 0),
+                      anchor="la")
+        x += width
+    x = xy[0]
+    for (text, colour), width in zip(segments, widths):
+        draw.text((x, xy[1]), text, font=fnt, fill=colour, anchor="la")
+        x += width
+
+
+def _legend(draw: ImageDraw.ImageDraw, canvas_wh, scale: float) -> None:
+    """Small bottom-left legend: what each box colour means."""
+    size = max(11, int(round(12 * scale)))
+    swatch = max(8, int(round(9 * scale)))
+    pad = 4
+    entries = ((GT_COLOR, "GT"), (TP_COLOR, "TP"), (FP_COLOR, "FP"))
+    widths = [swatch + 4 + draw.textlength(label, font=imaging.font(size, bold=True))
+              + 14 for _, label in entries]
+    total = sum(widths) + 2 * pad
+    height = swatch + 2 * pad
+    top = canvas_wh[1] - height - 6
+    draw.rectangle([4, top - 2, 6 + total, top + height + 2], fill=(0, 0, 0))
+    x = 4 + pad
+    for (colour, label), width in zip(entries, widths):
+        draw.rectangle([x, top + pad, x + swatch, top + pad + swatch],
+                       outline=colour, width=2)
+        _text(draw, (x + swatch + 4, top + height // 2), label, size=size,
+              anchor="lm")
+        x += width
 
 
 def _clamped_label_xy(draw: ImageDraw.ImageDraw, xy, text, size: int,
@@ -69,7 +104,7 @@ def draw_detection_overlay(image_rgb: np.ndarray,
                            fn_gt_indices: list[int] | None,
                            title: str,
                            header_px: int = 34) -> np.ndarray:
-    """Per-run diagnostic: predictions (redness ramp) over GT boxes (green)."""
+    """Per-run diagnostic: white GT boxes under match-coloured predictions."""
     inventory = list(inventory or [])
     gt_boxes = list(gt_boxes or [])
     fn_set = set(fn_gt_indices or [])
@@ -85,11 +120,10 @@ def draw_detection_overlay(image_rgb: np.ndarray,
     text_size = int(14 * scale)
     gt_width = max(2, int(round(2 * scale)))
     pred_width_base = max(2, int(round(3 * scale)))
-    tick_length = max(6, int(round(9 * scale)))
 
-    # GT first, so the (thicker) prediction strokes land on top. A missed GT
-    # is marked only by its red MISS label below the box — never by a second
-    # rectangle, which reads as a prediction box.
+    # GT first (white, thin), so the (thicker, match-coloured) prediction
+    # strokes land on top. A missed GT is marked only by its red MISS label
+    # below the box — never by a second rectangle.
     for box in gt_boxes:
         x1, y1, x2, y2 = [float(v) for v in box]
         target = [x1, y1 + oy, x2, y2 + oy]
@@ -102,26 +136,26 @@ def draw_detection_overlay(image_rgb: np.ndarray,
             continue
         x1, y1, x2, y2 = [float(v) for v in bbox]
         box = [min(x1, x2), min(y1, y2) + oy, max(x1, x2), max(y1, y2) + oy]
-        colour = imaging.redness_colour(berry.get("redness_pct"))
+        # The box colour says the VERDICT (TP green / FP red); redness only
+        # colours the "red xx%" segment of the label, never the box itself.
+        is_tp = index in tp_pred_set
+        colour = TP_COLOR if is_tp else FP_COLOR
         occlusion = berry.get("occlusion_pct")
         width = max(1, int(round((pred_width_base
                                   if occlusion is None or occlusion < 60 else 1)
                                  * scale)))
         draw.rectangle(box, outline=(0, 0, 0), width=width + 2)
         draw.rectangle(box, outline=colour, width=width)
-        if index in tp_pred_set:
-            _corner_ticks(draw, box, tick_length, max(2, gt_width))
-            tag = "TP"
-        else:
-            tag = "FP"
-        label = (f"#{index} {tag}"
-                 + (f" red {berry['redness_pct']}%"
-                    if berry.get("redness_pct") is not None else "")
-                 + (f" occ {berry['occlusion_pct']}%"
-                    if berry.get("occlusion_pct") is not None else ""))
+        segments = [(f"#{index} {'TP' if is_tp else 'FP'}", colour)]
+        if berry.get("redness_pct") is not None:
+            segments.append((f" red {berry['redness_pct']}%",
+                             imaging.redness_colour(berry["redness_pct"])))
+        if berry.get("occlusion_pct") is not None:
+            segments.append((f" occ {berry['occlusion_pct']}%", colour))
+        label = "".join(text for text, _ in segments)
         xy = _clamped_label_xy(draw, (box[0], box[1] - int(17 * scale)),
                                label, text_size, img.size, oy)
-        _text(draw, xy, label, size=text_size, fill=colour)
+        _text_segments(draw, xy, segments, size=text_size)
 
     for gt_index in sorted(fn_set):
         if gt_index >= len(gt_boxes):
@@ -129,7 +163,7 @@ def draw_detection_overlay(image_rgb: np.ndarray,
         x1, y1, x2, y2 = [float(v) for v in gt_boxes[gt_index]]
         xy = _clamped_label_xy(draw, (x1, y2 + oy + int(2 * scale)), "MISS",
                                text_size, img.size, oy)
-        _text(draw, xy, "MISS", size=text_size, fill=MISS_COLOR)
+        _text(draw, xy, "MISS", size=text_size, fill=FP_COLOR)
 
     n_pred = len(inventory)
     tp = len(matches_50 or [])
@@ -140,6 +174,7 @@ def draw_detection_overlay(image_rgb: np.ndarray,
     summary = f"pred {n_pred} / gt {len(gt_boxes)}  TP {tp} FP {fp} FN {fn}"
     _text(draw, (w - 6, header_px // 2), summary, size=15,
           fill=(255, 120, 120) if fn else (255, 255, 255), anchor="rm")
+    _legend(draw, img.size, scale)
     return np.array(img)
 
 

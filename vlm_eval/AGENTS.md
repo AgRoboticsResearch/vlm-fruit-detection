@@ -358,7 +358,8 @@ A batch is only reportable when all of these hold. `verify_run.py` enforces them
 * Every run has a known status — parsed (`ok`) or an explicit failure
   (`empty`, `refused`, `parse_error`, `exec_error`, `schema_invalid`,
   `out_of_frame`). A missing or empty response is **never** silently a success.
-* Every run has an overlay PNG that decodes, and a token count.
+* Every run has an overlay image (JPG, PNG in older runs) that decodes, and a
+  token count.
 * Every unscored run is explicitly out-of-frame or failed.
 * No run has tool attempts.
 * The report states the vision-delivery verdict, and it agrees with
