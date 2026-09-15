@@ -190,7 +190,7 @@ Prompts are a library, selected by name or title with `--styles`
 is active** — it is the pipeline's single prompt and the only one a default batch
 runs; the rest are archived (named explicitly in `--styles` they still run, e.g.
 for comparisons). The active pipeline is specified standalone in
-[`full_detection.md`](full_detection.md).
+[`pipeline/full_detection.md`](pipeline/full_detection.md).
 
 | style | status | input | runs on | what it probes |
 | --- | --- | --- | --- | --- |

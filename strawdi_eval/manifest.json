@@ -1,6 +1,6 @@
 {
   "schema_version": "strawdi_eval/1",
-  "generated_at": "2026-09-14T15:26:55+00:00",
+  "generated_at": "2026-09-15T03:05:17+00:00",
   "generator": {
     "script": "build_manifest.py",
     "argv": [],

@@ -23,10 +23,11 @@ python3 vlm_eval/verify_run.py vlm_eval/runs/<timestamp>-full   # must print PAS
 
 ## StrawDI detection eval (`strawdi_eval/`)
 
-The second VLM pipeline: the same nine-field unbiased inventory output
-standard, run on the public StrawDI_Db1 dataset and **scored as multi-instance
-detection** against mask-derived GT boxes. Its spec is
-[`strawdi_eval/strawdi_detection.md`](strawdi_eval/strawdi_detection.md); it
+The second VLM pipeline: the unbiased inventory output standard narrowed to
+detection (eight per-fruit fields — no picking point, no target nomination
+since v0.2), run on the public StrawDI_Db1 dataset and **scored as
+multi-instance detection** against mask-derived GT boxes. Its spec is
+[`strawdi_eval/pipeline/strawdi_detection.md`](strawdi_eval/pipeline/strawdi_detection.md); it
 imports the provider stack, prompt, parser and control from `vlm_eval/`
 unchanged (do not modify `vlm_eval/` for it), and inherits the same
 invariants — control first, tools off, no annotated inputs, ≤1280 px,

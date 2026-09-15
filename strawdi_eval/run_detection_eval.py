@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """StrawDI detection eval — run the VLM inventory pipeline over StrawDI_Db1.
 
-Executes the ONE prompt of the StrawDI pipeline (``inventory_plain``, imported
-verbatim from the base harness, parameterised to the frame size) on every
-manifest sample, then scores the inventories as multi-instance detection
-against the mask-derived ground-truth boxes.
+Executes the ONE prompt of the StrawDI pipeline (``inventory_detection``: the
+base harness's unbiased inventory, detection-only — eight fields, no picking
+point, no nomination, boxes cover the fruit body only) on every manifest
+sample, then scores the inventories as multi-instance detection against the
+mask-derived ground-truth boxes.
 
 The base harness (``vlm_eval/``) supplies everything model-facing: the
 provider stack (claude/codex CLIs, tool surfaces off, images as base64 blocks),
@@ -48,17 +49,18 @@ REPO = HERE.parent
 sys.path.insert(0, str(REPO))
 
 from vlm_eval.lib import imaging, parse  # noqa: E402
-from vlm_eval import prompts  # noqa: E402
 import vlm_eval.run_vlm_eval as vre  # noqa: E402
+from strawdi_eval.lib import prompt as strawdi_prompt  # noqa: E402
 from strawdi_eval.lib import render, scoring  # noqa: E402
 
 HARNESS_NAME = "strawdi_eval"
-HARNESS_VERSION = "0.1.0"
+HARNESS_VERSION = "0.2.2"
 
-# The pipeline's single prompt and its answer schema, verbatim from the base
-# harness — the output standard this pipeline follows.
-STYLE = prompts.STYLES["inventory_plain"]
-SCHEMA_PATH = vre.INVENTORY_SCHEMA_PATH
+# The pipeline's single prompt and its answer schema: the base harness's
+# unbiased inventory, detection-only — eight per-fruit fields, no picking
+# point, no nomination. See lib/prompt.py for what changed vs inventory_plain.
+STYLE_NAME = strawdi_prompt.STYLE_NAME
+SCHEMA_PATH = HERE / "schema" / "inventory_detection_schema.json"
 
 DEFAULT_RUNS_DIR = HERE / "runs"
 DEFAULT_JOBS = 3
@@ -92,7 +94,8 @@ CONFIDENCE_TIE_NOTE = (
 def harness_info() -> dict:
     """Fingerprint of THIS pipeline's code (not the base harness's)."""
     digest = hashlib.sha256()
-    files = sorted(HERE.glob("*.py")) + sorted((HERE / "lib").glob("*.py"))
+    files = (sorted(HERE.glob("*.py")) + sorted((HERE / "lib").glob("*.py"))
+             + sorted((HERE / "schema").glob("*.json")))
     for path in files:
         digest.update(path.relative_to(HERE).as_posix().encode())
         digest.update(path.read_bytes())
@@ -173,20 +176,74 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def build_prompt(sample: dict) -> str:
     h, w = sample["image_shape_hw"]
-    prompt = STYLE.build_prompt(frame_w=w, frame_h=h, query_origin=(0, 0),
-                                multi_fruit=True)
+    prompt = strawdi_prompt.build_inventory_detection(frame_w=w, frame_h=h)
     return f"{prompt}\n\n{vre.TOOL_NOTICE}"
+
+
+# The per-fruit attributes kept from the inventory (everything the eight-field
+# prompt asks for besides bbox, which the scorer reads separately).
+DETECTION_ATTRS = ("redness_pct", "occlusion_pct", "calyx_visible",
+                   "peduncle_visible", "graspable", "confidence_pct",
+                   "description")
+
+
+def classify_detection(last_message: str, schema: dict) -> dict:
+    """Parse a detection-only inventory (eight fields, no nomination).
+
+    Mirrors the base harness's ``classify_inventory`` minus everything
+    picking-oriented: no ``picking_point``, no ``target_index``. A bare
+    top-level list is accepted and wrapped. Statuses: ``ok`` or the explicit
+    failure statuses — ``no_pick_point`` can no longer occur (kept accepted
+    downstream only so v0.1 runs still rebuild).
+    """
+    result = {
+        "status": None, "json_method": None, "schema_valid": None,
+        "schema_error": None, "strawberries": [], "n_strawberries": 0,
+    }
+    text = (last_message or "").strip()
+    if not text:
+        result["status"] = parse.EMPTY_RESPONSE
+        return result
+
+    obj, method = parse.extract_json(text)
+    result["json_method"] = method
+    if obj is None:
+        result["status"] = parse.REFUSED if parse.looks_like_refusal(text) \
+            else parse.PARSE_ERROR
+        return result
+
+    payload = {"strawberries": obj} if isinstance(obj, list) else obj
+    valid, error = parse.validate(payload, schema)
+    result["schema_valid"] = valid
+    result["schema_error"] = error
+    if not valid:
+        result["status"] = parse.SCHEMA_INVALID
+        return result
+
+    berries = []
+    for entry in payload["strawberries"]:
+        box = parse.normalise_box(entry.get("bbox"))
+        berry = {"bbox": list(box) if box else None}
+        berry.update({key: entry.get(key) for key in DETECTION_ATTRS})
+        berries.append(berry)
+
+    result["strawberries"] = berries
+    result["n_strawberries"] = len(berries)
+    result["status"] = parse.OK
+    return result
 
 
 def detection_block(record: dict) -> dict:
     """Score a parsed record's inventory against its GT boxes.
 
     Failure statuses (empty/refused/parse/exec/schema) carry no detection
-    numbers at all — never zeros. A parsed inventory reporting ZERO fruit is a
-    valid answer and scores as all-missed.
+    *numbers* at all — never zeros. ``n_gt`` is kept everywhere: it is a
+    property of the sample, not a score, and the count-error accounting needs
+    it. A parsed inventory reporting ZERO fruit is a valid answer and scores
+    as all-missed.
     """
     if record["status"] not in (parse.OK, parse.NO_PICK_POINT):
-        return scoring.empty_detection()
+        return {**scoring.empty_detection(), "n_gt": len(record["gt_boxes"])}
     return scoring.score_image(record["inventory"], record["gt_boxes"],
                                record["gt_areas"], record["frame_w"],
                                record["frame_h"])
@@ -201,9 +258,10 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
 
     model = run_ctx["model"]
     effort = run_ctx["effort"]
-    stem = f"{STYLE.name}__{sample['sample_id']}"
+    stem = f"{STYLE_NAME}__{sample['sample_id']}"
     attempts: list[dict] = []
     fallback_used = False
+    fallback_reason = None
 
     message_path = run_ctx["tmp"] / f"{stem}.last.txt"
     attempt = vre.call_model(args, manifest, image, prompt, message_path,
@@ -211,18 +269,34 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
                              args.timeout)
     attempts.append(attempt)
 
-    scored = vre.classify_inventory(attempt["last_message"], schema, w, h)
+    scored = classify_detection(attempt["last_message"], schema)
+    do_retry = False
+    retry_effort = None
     if scored["status"] == parse.EMPTY_RESPONSE and effort != "low":
         # Same recorded fallback as the base harness: reasoning can exhaust the
         # output budget, leaving no message at all.
+        retry_effort = "low"
+        fallback_reason = "empty response at configured reasoning effort"
+        do_retry = True
+    elif scored["status"] == parse.SCHEMA_INVALID:
+        # One recorded resample at the SAME effort. A schema violation is either
+        # a field-level contract break by the model or transport-error text the
+        # CLI surfaced as the reply; neither is a reasoning-budget problem, so
+        # the retry measures the same configuration as the first attempt.
+        # NB: effort may be None (provider default) — that IS the same effort,
+        # so the decision needs its own flag, not a None sentinel.
+        retry_effort = effort
+        fallback_reason = "schema-invalid reply, one resample at same effort"
+        do_retry = True
+    if do_retry:
         fallback_used = True
         message_path = run_ctx["tmp"] / f"{stem}.retry.last.txt"
         retry = vre.call_model(args, manifest, image, prompt, message_path,
-                               None, model, "low", run_ctx["agent_cwd"],
+                               None, model, retry_effort, run_ctx["agent_cwd"],
                                args.timeout)
         retry["fallback_of_attempt"] = 1
         attempts.append(retry)
-        scored = vre.classify_inventory(retry["last_message"], schema, w, h)
+        scored = classify_detection(retry["last_message"], schema)
 
     totals = vre.merge_usage(attempts)
     parsed_ok = scored["status"] in (parse.OK, parse.NO_PICK_POINT)
@@ -230,7 +304,7 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
 
     record = {
         "run_id": stem,
-        "style": STYLE.name,
+        "style": STYLE_NAME,
         "sample_id": sample["sample_id"],
         "source": sample["source"],
         "split": sample["split"],
@@ -250,17 +324,14 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
         "provider": args.provider,
         "reasoning_effort": effort,
         "used_output_schema": False,
-        "output_shape": STYLE.output_shape,
+        "output_shape": "inventory",
         "image": sample["images"]["raw"],
         "image_kind": "raw",
         "frame_w": w,
         "frame_h": h,
         "prompt": prompt,
         "inventory": inventory,
-        "target_index": scored.get("target_index"),
-        "target_valid": scored.get("target_valid"),
         "n_strawberries": scored["n_strawberries"] if parsed_ok else None,
-        "n_points_out_of_frame": scored.get("n_out_of_frame") if parsed_ok else None,
         **vre._inventory_summary(inventory),
         # Ground truth rides inside the record so the run is self-contained
         # and --rebuild-report can re-score without the dataset.
@@ -274,8 +345,7 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
         **totals,
         "attempts": len(attempts),
         "fallback_used": fallback_used,
-        "fallback_reason": ("empty response at configured reasoning effort"
-                            if fallback_used else None),
+        "fallback_reason": fallback_reason if fallback_used else None,
         "wall_s": round(sum(a["wall_s"] for a in attempts), 3),
         "returncodes": [a["returncode"] for a in attempts],
         "timed_out": any(a["timed_out"] for a in attempts),
@@ -306,12 +376,12 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
         ],
     }
 
-    title = f"{STYLE.name} | {sample['sample_id']} | {sample['n_gt']}gt | {scored['status']}"
+    title = f"{STYLE_NAME} | {sample['sample_id']} | {sample['n_gt']}gt | {scored['status']}"
     rel = Path("overlays") / f"{stem}.png"
     try:
         raw = imaging.load_rgb(image)
         overlay = render.draw_detection_overlay(
-            raw, inventory, scored.get("target_index"), sample["gt_boxes"],
+            raw, inventory, sample["gt_boxes"],
             record["matches_50"], record["fn_gt_indices_50"], title)
         imaging.save_rgb(overlay, run_ctx["run_dir"] / rel)
         record["overlay"] = str(rel)
@@ -324,8 +394,8 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
 def failure_record(sample: dict, exc: BaseException, run_ctx) -> dict:
     """A run that blew up in the harness itself, recorded rather than raised."""
     return {
-        "run_id": f"{STYLE.name}__{sample['sample_id']}",
-        "style": STYLE.name, "sample_id": sample["sample_id"],
+        "run_id": f"{STYLE_NAME}__{sample['sample_id']}",
+        "style": STYLE_NAME, "sample_id": sample["sample_id"],
         "source": sample["source"], "split": sample["split"],
         "has_gt": True, "task": sample.get("task", "full_inventory"),
         "status": parse.EXEC_ERROR, "json_method": None,
@@ -337,16 +407,14 @@ def failure_record(sample: dict, exc: BaseException, run_ctx) -> dict:
         "base_harness_version": run_ctx["base_harness"]["version"],
         "base_harness_fingerprint": run_ctx["base_harness"]["fingerprint"],
         "provider": None, "reasoning_effort": None,
-        "used_output_schema": False, "output_shape": STYLE.output_shape,
+        "used_output_schema": False, "output_shape": "inventory",
         "image": sample["images"]["raw"], "image_kind": "raw",
         "frame_w": sample["image_shape_hw"][1],
         "frame_h": sample["image_shape_hw"][0],
-        "prompt": None, "inventory": None, "target_index": None,
-        "target_valid": None, "n_strawberries": None,
-        "n_points_out_of_frame": None,
+        "prompt": None, "inventory": None, "n_strawberries": None,
         **vre._inventory_summary(None),
         "gt_boxes": sample["gt_boxes"], "gt_areas": sample["gt_areas"],
-        **scoring.empty_detection(),
+        **{**scoring.empty_detection(), "n_gt": sample["n_gt"]},
         "input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0,
         "reasoning_output_tokens": 0, "total_tokens": 0,
         "attempts": 0, "fallback_used": False, "fallback_reason": None,
@@ -384,6 +452,10 @@ def detection_summary(records: list[dict]) -> dict:
             status: sum(1 for r in failed if r["status"] == status)
             for status in sorted({r["status"] for r in failed})
         },
+        "retried_calls": sum(1 for r in records if r.get("fallback_used")),
+        "retries_recovered": sum(
+            1 for r in records if r.get("fallback_used")
+            and r["status"] in (parse.OK, parse.NO_PICK_POINT)),
     }
 
     for threshold in scoring.IOU_THRESHOLDS:
@@ -489,7 +561,7 @@ def _render_all(run_dir: Path, records: list[dict]) -> None:
         try:
             raw = imaging.load_rgb(HERE / record["image"])
             overlay = render.draw_detection_overlay(
-                raw, record.get("inventory"), record.get("target_index"),
+                raw, record.get("inventory"),
                 record.get("gt_boxes"), record.get("matches_50"),
                 record.get("fn_gt_indices_50"), title)
             imaging.save_rgb(overlay, run_dir / rel)
@@ -539,9 +611,13 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
     headline = summary.get("f1_50")
     add(f"# StrawDI detection eval — {verdict}")
     add("")
+    failed_note = (f"; {summary['calls'] - summary['parsed']} call(s) failed to parse "
+                   f"and are excluded from every metric"
+                   if summary["calls"] != summary["parsed"] else "")
     add(f"Headline: **F1@IoU0.5 = {headline}** "
         f"(P {summary.get('precision_50')}, R {summary.get('recall_50')}) "
-        f"on {summary['calls']} frames, {summary['gt_total']} GT instances.")
+        f"on {summary['parsed']} of {summary['calls']} parsed frames "
+        f"({summary['gt_total']} GT instances){failed_note}.")
     add("")
     add(f"- **Harness:** {info['name']} v{info['version']} "
         f"(fingerprint `{info['fingerprint']}`)")
@@ -585,10 +661,11 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
         f"{manifest['samples'][0]['image_shape_hw'][1]}x"
         f"{manifest['samples'][0]['image_shape_hw'][0]} "
         f"(inside the 1280 px no-resize ceiling; GT maps 1:1).")
-    add("- Prompt: `inventory_plain` verbatim from the base harness — the "
-        "nine-field unbiased inventory + `target_index`; every fruit whatever "
-        "its colour. Nomination/picking-point fields are recorded but never "
-        "scored (StrawDI has no picking-point GT).")
+    add("- Prompt: `inventory_detection` — the base harness's unbiased "
+        "inventory with the picking-oriented parts removed: EIGHT per-fruit "
+        "fields, no `picking_point`, no `target_index` nomination. Every fruit "
+        "whatever its colour; boxes cover the fruit body only (calyx/stem "
+        "excluded unless lying on the fruit).")
     add("- Matching: greedy, confidence-descending, one GT per prediction, "
         "recomputed per threshold at IoU 0.25 / 0.5 / 0.75; centre-containment "
         "reported alongside.")
@@ -625,6 +702,10 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
     add(f"| totals | {summary['gt_total']} GT, {summary['pred_total']} predicted |")
     if summary["failures_by_status"]:
         add(f"| failures by status | {summary['failures_by_status']} |")
+    if summary.get("retried_calls"):
+        add(f"| retried calls (recovered) | {summary['retried_calls']} "
+            f"({summary['retries_recovered']} parsed after retry; "
+            f"empty→low-effort or schema-invalid→same-effort, all recorded) |")
     add("")
 
     # Size strata
@@ -712,10 +793,10 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
 
     # Overlays
     add("## Overlays")
-    add("Per-run overlays in `overlays/` (green = GT box, red inner = missed "
-        "GT, redness-ramp = predictions with white TP corner ticks, cyan = "
-        "nominated target); contact sheets in `contact_sheets/` "
-        "(chunks of 24) and `contact_sheets/miss_gallery.png`.")
+    add("Per-run overlays in `overlays/` (green = GT box — a missed one carries "
+        "a red `MISS` label below it, redness-ramp = predictions with white TP "
+        "corner ticks); contact sheets in `contact_sheets/` (chunks of 24) and "
+        "`contact_sheets/miss_gallery.png`.")
     add("")
 
     # Exact prompt
@@ -743,18 +824,18 @@ def write_artifacts(run_dir: Path, args, manifest, control, records: list[dict],
     # Re-derive the detection fields from the stored inventories so a rebuild
     # after a scoring fix re-scores every old run (the records carry their GT).
     for record in records:
-        if record.get("inventory") is not None or record["status"] in (
-                parse.OK, parse.NO_PICK_POINT):
-            record.update(detection_block(record))
-        else:
-            record.update(scoring.empty_detection())
+        record.update(detection_block(record))
     records.sort(key=lambda r: r["sample_id"])
 
+    # Render BEFORE persisting: _render_all updates each record's overlay
+    # field (and clears render_error), and those updates must land in the
+    # written artefacts — a rebuild re-renders from scratch, so its overlay
+    # outcomes only exist after this step.
+    _render_all(run_dir, records)
     (run_dir / "responses.jsonl").write_text(
         "".join(json.dumps(r) + "\n" for r in records))
     summary = detection_summary(records)
     write_detection_csvs(run_dir, records, summary)
-    _render_all(run_dir, records)
     write_report(run_dir, args, manifest, control, records, summary, started,
                  elapsed, run_summary, rebuilt_with)
 
@@ -765,7 +846,7 @@ def write_artifacts(run_dir: Path, args, manifest, control, records: list[dict],
 
 def dry_run(args, manifest, model) -> None:
     samples = manifest["samples"][: args.limit] if args.limit else manifest["samples"]
-    print(f"dry run : {len(samples)} frame(s), 1 prompt ({STYLE.name}), "
+    print(f"dry run : {len(samples)} frame(s), 1 prompt ({STYLE_NAME}), "
           f"1 control call; provider={args.provider} model={model}")
     print(f"plan    : {len(samples) + 1} model call(s) if run for real")
     sample = samples[0]
@@ -870,7 +951,7 @@ def main(argv: list[str] | None = None) -> None:
     print(f"run dir : {run_dir}")
     print(f"model   : {model}  provider={args.provider}  "
           f"effort={effort or 'config default'}")
-    print(f"plan    : {len(samples)} frames x 1 prompt ({STYLE.name}) "
+    print(f"plan    : {len(samples)} frames x 1 prompt ({STYLE_NAME}) "
           f"= {len(samples)} calls + 1 control")
 
     # The control image path must be resolved against THIS harness's directory

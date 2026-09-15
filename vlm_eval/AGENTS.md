@@ -274,8 +274,9 @@ the catalogue.
 
 **Since 2026-09-14 only `inventory_plain` is active** — it is the pipeline's
 single prompt, and that pipeline is specified standalone (model-agnostic) in
-[`full_detection.md`](full_detection.md); further pipeline docs will live beside
-it. The other seven prompts are **archived** (`ARCHIVED_STYLES` in
+[`pipeline/full_detection.md`](pipeline/full_detection.md); further pipeline
+docs will live in that `pipeline/` subfolder. The other seven prompts are
+**archived** (`ARCHIVED_STYLES` in
 `prompts.py`): excluded from default batches, but still runnable by naming them
 explicitly in `--styles`, and still resolvable by `--rebuild-report`.
 
@@ -532,7 +533,7 @@ Do not add these back without an explicit request:
 | --- | --- |
 | `AGENTS.md` (this file) | agent runbook; `CLAUDE.md` is a symlink to it |
 | `README.md` | human-facing what/why, findings, caveats |
-| `full_detection.md` | standalone model-agnostic spec of the active pipeline (full-scene inventory + pick nomination); first of a per-pipeline doc series |
+| `pipeline/full_detection.md` | standalone model-agnostic spec of the active pipeline (full-scene inventory + pick nomination); first of a per-pipeline doc series |
 | `run_vlm_eval.py` | the harness: runs, parses, scores, writes the report |
 | `build_manifest.py` | recomputes ground truth, copies frames, derives images |
 | `verify_run.py` | asserts the acceptance criteria on a finished run |

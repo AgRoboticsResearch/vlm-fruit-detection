@@ -4,10 +4,10 @@
 Never fed to the model — these are the after-the-fact overlays that pair the
 model's inventory with the mask-derived ground truth. Reuses the base
 conventions of ``vlm_eval/lib/imaging.py`` (redness-ramp prediction boxes,
-cyan nominated target, header strip) and adds the GT layer:
+header strip) and adds the GT layer:
 
-* green thin box   – a ground-truth strawberry (visible-surface mask extent)
-* red re-stroke    – a GT box the model missed (FN), labelled ``MISS``
+* green thin box   – a ground-truth strawberry (visible-surface mask extent);
+  one the model missed carries a red ``MISS`` label under it (no extra box)
 * white corner ticks – a prediction that matched a GT box at IoU >= 0.5 (TP)
 * ``FP`` label     – a prediction that matched nothing
 """
@@ -19,10 +19,9 @@ from PIL import Image, ImageDraw
 
 from vlm_eval.lib import imaging
 
-GT_COLOR = (60, 230, 90)        # green – ground-truth box
-MISS_COLOR = (255, 60, 60)      # red   – GT box no prediction matched
+GT_COLOR = (60, 230, 90)        # green – ground-truth box (missed or not)
+MISS_COLOR = (255, 60, 60)      # red   – colour of the MISS text label
 TICK_COLOR = (255, 255, 255)    # white – TP corner ticks
-TARGET_COLOR = (0, 255, 255)    # cyan  – nominated pick target
 
 
 def _text(draw: ImageDraw.ImageDraw, xy, text, size=14, fill=(255, 255, 255),
@@ -65,7 +64,6 @@ def _clamped_label_xy(draw: ImageDraw.ImageDraw, xy, text, size: int,
 
 def draw_detection_overlay(image_rgb: np.ndarray,
                            inventory: list[dict] | None,
-                           target_index: int | None,
                            gt_boxes: list | None,
                            matches_50: list[dict] | None,
                            fn_gt_indices: list[int] | None,
@@ -89,17 +87,13 @@ def draw_detection_overlay(image_rgb: np.ndarray,
     pred_width_base = max(2, int(round(3 * scale)))
     tick_length = max(6, int(round(9 * scale)))
 
-    # GT first, so the (thicker) prediction strokes land on top.
-    for gt_index, box in enumerate(gt_boxes):
+    # GT first, so the (thicker) prediction strokes land on top. A missed GT
+    # is marked only by its red MISS label below the box — never by a second
+    # rectangle, which reads as a prediction box.
+    for box in gt_boxes:
         x1, y1, x2, y2 = [float(v) for v in box]
         target = [x1, y1 + oy, x2, y2 + oy]
-        missed = gt_index in fn_set
         draw.rectangle(target, outline=GT_COLOR, width=gt_width)
-        if missed:
-            inset = 2 * gt_width
-            draw.rectangle([target[0] + inset, target[1] + inset,
-                            target[2] - inset, target[3] - inset],
-                           outline=MISS_COLOR, width=gt_width)
 
     tp_pred_set = {m["pred_index"] for m in (matches_50 or [])}
     for index, berry in enumerate(inventory):
@@ -109,29 +103,25 @@ def draw_detection_overlay(image_rgb: np.ndarray,
         x1, y1, x2, y2 = [float(v) for v in bbox]
         box = [min(x1, x2), min(y1, y2) + oy, max(x1, x2), max(y1, y2) + oy]
         colour = imaging.redness_colour(berry.get("redness_pct"))
-        is_target = target_index is not None and index == target_index
         occlusion = berry.get("occlusion_pct")
         width = max(1, int(round((pred_width_base
                                   if occlusion is None or occlusion < 60 else 1)
                                  * scale)))
         draw.rectangle(box, outline=(0, 0, 0), width=width + 2)
-        draw.rectangle(box, outline=TARGET_COLOR if is_target else colour,
-                       width=width)
+        draw.rectangle(box, outline=colour, width=width)
         if index in tp_pred_set:
             _corner_ticks(draw, box, tick_length, max(2, gt_width))
             tag = "TP"
         else:
             tag = "FP"
         label = (f"#{index} {tag}"
-                 + (f" TARGET" if is_target else "")
                  + (f" red {berry['redness_pct']}%"
                     if berry.get("redness_pct") is not None else "")
                  + (f" occ {berry['occlusion_pct']}%"
                     if berry.get("occlusion_pct") is not None else ""))
         xy = _clamped_label_xy(draw, (box[0], box[1] - int(17 * scale)),
                                label, text_size, img.size, oy)
-        _text(draw, xy, label, size=text_size,
-              fill=TARGET_COLOR if is_target else colour)
+        _text(draw, xy, label, size=text_size, fill=colour)
 
     for gt_index in sorted(fn_set):
         if gt_index >= len(gt_boxes):

@@ -109,6 +109,8 @@ def main() -> int:
 
     broken = []
     for record in records:
+        if not record.get("overlay"):
+            continue  # already flagged by the missing-overlay check above
         path = run_dir / record["overlay"]
         if path.exists():
             try:
@@ -118,18 +120,23 @@ def main() -> int:
                 broken.append(f"{record['run_id']}: {exc}")
     c.check(not broken, f"every overlay decodes as an image ({broken})")
 
-    no_tokens = [r["run_id"] for r in records if not r.get("total_tokens")]
-    c.check(not no_tokens, f"every run has a token count (missing: {no_tokens})")
+    no_tokens = [r["run_id"] for r in records
+                 if r["status"] in PARSE_SUCCESS and not r.get("total_tokens")]
+    c.check(not no_tokens,
+            f"every parsed run has a token count (missing: {no_tokens})")
 
     no_gt = [r["run_id"] for r in records if not isinstance(r.get("n_gt"), int)]
     c.check(not no_gt, f"every run carries its GT instance count (missing: {no_gt})")
 
     # ---- detection-field coherence ---------------------------------------
     print("\n[detection fields]")
+    # n_gt is sample metadata (kept on failures); every other detection key
+    # must be None on a failed call — never zeros.
+    failure_keys = set(scoring.DETECTION_KEYS) - {"n_gt"}
     incoherent = []
     for record in records:
         if record["status"] not in PARSE_SUCCESS:
-            if any(record.get(k) is not None for k in scoring.DETECTION_KEYS):
+            if any(record.get(k) is not None for k in failure_keys):
                 incoherent.append(f"{record['run_id']}: failure carries numbers")
             continue
         if record["tp_50"] + record["fp_50"] != record["n_pred"]:

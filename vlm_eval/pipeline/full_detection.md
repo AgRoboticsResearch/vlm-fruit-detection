@@ -1,13 +1,13 @@
 # full_detection — full-scene strawberry inventory + pick nomination
 
 Standalone, **model-agnostic** spec of the first perception pipeline. More
-pipeline docs will live beside this file; each one defines what the pipeline
-does, its input/output contract, and how to run it through the harness —
-independently of which model executes it.
+pipeline docs will live in this `pipeline/` subfolder; each one defines what
+the pipeline does, its input/output contract, and how to run it through the
+harness — independently of which model executes it.
 
-Implementation lives in this directory (`prompts.py`, `run_vlm_eval.py`,
-`schema/inventory_schema.json`); [`AGENTS.md`](AGENTS.md) remains the binding
-runbook for the harness's measurement invariants.
+Implementation lives in the parent directory (`prompts.py`, `run_vlm_eval.py`,
+`schema/inventory_schema.json`); [`../AGENTS.md`](../AGENTS.md) remains the
+binding runbook for the harness's measurement invariants.
 
 ---
 

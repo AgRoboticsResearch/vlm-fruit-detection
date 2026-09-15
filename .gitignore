@@ -27,3 +27,6 @@ strawdi_eval/agent_cwd/
 # OS / editor junk
 .DS_Store
 *.swp
+
+# Agent-bridge runtime state (regenerable)
+strawdi_eval/agent_bridge/state/
