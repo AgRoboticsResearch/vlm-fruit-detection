@@ -68,12 +68,12 @@ from strawdi_eval.lib import prompt as strawdi_prompt  # noqa: E402
 from vlm_eval import prompts as base_prompts           # noqa: E402
 from vlm_eval.lib import imaging, parse                # noqa: E402
 
-PROVIDER = "workbuddy"
-DEFAULT_MODEL = "deepseek-v4.1-flash"
-EFFORT = "not-exposed"        # the agent runtime does not expose an effort knob
+PROVIDER = "antigravity"
+DEFAULT_MODEL = "gemini-3.8-flash-high"
+DEFAULT_EFFORT = "high"
 STATE_ROOT = BRIDGE_DIR / "state"
 CONTROL_W, CONTROL_H = 640, 480
-AGENT_SECTION_MARKER = "\n## Agent-driven run (workbuddy)\n"
+AGENT_SECTION_MARKER = "\n## Agent-driven run\n"
 
 # Text-length token estimator: no provider usage exists in this mode.
 TOKEN_ESTIMATOR = "ceil(chars/4) over prompt text + reply text (image tokens not counted)"
@@ -130,11 +130,13 @@ def cmd_prepare(args) -> None:
     (state / "control_prompt.txt").write_text(control_prompt)
     (state / "prompt.txt").write_text(rde.build_prompt(samples[0]))
 
+    provider = getattr(args, "provider", None) or PROVIDER
+    effort = getattr(args, "effort", None) or DEFAULT_EFFORT
     plan = {
         "bridge": {"name": "strawdi_eval/agent_bridge", "version": BRIDGE_VERSION,
-                   "path": str(BRIDGE_DIR), "provider": PROVIDER},
+                   "path": str(BRIDGE_DIR), "provider": provider},
         "model": args.model,
-        "effort": EFFORT,
+        "effort": effort,
         "tag": args.tag,
         "started": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "stamp": stamp,
@@ -325,9 +327,11 @@ def cmd_assemble(args) -> None:
         raise SystemExit("no answers written yet")
     tag = args.tag or plan.get("tag") or ""
     model = args.model or plan["model"]
+    provider = plan.get("bridge", {}).get("provider") or plan.get("provider") or PROVIDER
+    effort = args.effort or plan.get("effort") or DEFAULT_EFFORT
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    run_dir = args.out / rde.run_dir_name(stamp, model, args.effort or EFFORT, tag,
-                                          cli=PROVIDER)
+    run_dir = args.out / rde.run_dir_name(stamp, model, effort, tag,
+                                          cli=provider)
     if args.dry_dir:
         print(f"would write: {run_dir}")
         return
@@ -357,10 +361,10 @@ def cmd_assemble(args) -> None:
         (run_dir / "control.json").write_text(json.dumps(control, indent=2) + "\n")
 
     catalog = {
-        "provider": PROVIDER,
+        "provider": provider,
         "model_slug": model,
-        "reasoning_effort": EFFORT,
-        "runtime": "workbuddy agent (agent_bridge)",
+        "reasoning_effort": effort,
+        "runtime": f"{provider} agent (agent_bridge)",
         "delivery": ("agent read tool: one PNG per call, attached to the session as an "
                      "image content block; no CLI, no provider API call by the harness"),
         "input_modalities": ["image"],
@@ -409,9 +413,9 @@ def cmd_assemble(args) -> None:
             "base_harness": vre.harness_info()["name"],
             "base_harness_version": vre.harness_info()["version"],
             "base_harness_fingerprint": vre.harness_info()["fingerprint"],
-            "provider": PROVIDER,
-            "reasoning_effort": None,
-            "reasoning_effort_note": "not exposed by the agent runtime",
+            "provider": provider,
+            "reasoning_effort": effort,
+            "reasoning_effort_note": f"{effort} reasoning effort via {provider}",
             "used_output_schema": False,
             "output_shape": "inventory",
             "image": sample["images"]["raw"],
@@ -469,12 +473,12 @@ def cmd_assemble(args) -> None:
 
     started = plan["started"]
     elapsed = sum(r["wall_s"] for r in records)
-    args_ns = types.SimpleNamespace(provider=PROVIDER, jobs=1)
+    args_ns = types.SimpleNamespace(provider=provider, jobs=1)
     run_summary = {
         "model": model,
-        "effort": EFFORT,
-        "provider": PROVIDER,
-        "cli_version": f"workbuddy agent (agent_bridge v{BRIDGE_VERSION})",
+        "effort": effort,
+        "provider": provider,
+        "cli_version": f"{provider} agent (agent_bridge v{BRIDGE_VERSION})",
         "catalog": catalog,
         "harness": rde.harness_info(),
         "base_harness": vre.harness_info(),
@@ -499,10 +503,12 @@ def _append_agent_section(run_dir: Path, plan: dict, records: list[dict],
     n = len(records)
     failed = [r for r in records if r["status"] not in (parse.OK, parse.NO_PICK_POINT)]
     retried = sum(1 for r in records if r.get("fallback_used"))
+    provider = plan.get("bridge", {}).get("provider") or plan.get("provider") or PROVIDER
+    effort = plan.get("effort") or DEFAULT_EFFORT
     lines = [
         AGENT_SECTION_MARKER,
-        "This batch was produced by the **workbuddy agent** (provider "
-        f"`{PROVIDER}`, `strawdi_eval/agent_bridge/bridge.py` v{BRIDGE_VERSION}) "
+        f"This batch was produced by the **{provider} agent** (provider "
+        f"`{provider}`, `strawdi_eval/agent_bridge/bridge.py` v{BRIDGE_VERSION}) "
         "instead of the harness's `claude`/`codex` CLI provider stack: the agent "
         "itself was the model under test. The prompt, the eight-field schema, the "
         "reply parser, the scorer, the overlay renderer and this report are the "
@@ -515,7 +521,8 @@ def _append_agent_section(run_dir: Path, plan: dict, records: list[dict],
         lines.append(f"- **Excluded frames:** {', '.join(excluded)} — "
                      f"{exclude_reason or 'see the run notes'}. They are absent from "
                      "every metric, not scored as misses.")
-    lines += [        f"- **Model string:** `{plan['model']}` — as reported by the agent platform, "
+    lines += [
+        f"- **Model string:** `{plan['model']}` — as reported by the agent platform, "
         "not probed by the harness.",
         "- **Image delivery:** one frame per call, read from `data/frames/<id>.png` "
         "(the byte-identical snapshot the verifier sha256-checks) and attached to the "
@@ -526,8 +533,7 @@ def _append_agent_section(run_dir: Path, plan: dict, records: list[dict],
         "were written from the images alone, and the operator did not read "
         "`gt_boxes`, the manifest's ground-truth fields or any overlay until every "
         "answer was written.",
-        f"- **Reasoning effort:** `{EFFORT}` — the agent runtime does not expose an "
-        "effort knob, so it is recorded as not exposed rather than guessed.",
+        f"- **Reasoning effort:** `{effort}` — configured for the agent runtime.",
         "- **Token counts are ESTIMATES** (`usage_source: estimated`, "
         f"{TOKEN_ESTIMATOR}). An agent run has no provider usage report; do not "
         "compare these totals with a CLI run's billed tokens.",
@@ -559,6 +565,8 @@ def main(argv: list[str] | None = None) -> None:
     p = sub.add_parser("prepare", help="write a state dir + a fresh vision control")
     p.add_argument("--tag", default="")
     p.add_argument("--model", default=DEFAULT_MODEL)
+    p.add_argument("--provider", default=PROVIDER)
+    p.add_argument("--effort", default=DEFAULT_EFFORT)
     p.add_argument("--limit", type=int, default=None)
     p.set_defaults(func=cmd_prepare)
 
