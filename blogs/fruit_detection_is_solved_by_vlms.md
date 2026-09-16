@@ -1,14 +1,29 @@
-# Is Fruit Detection “Solved” by Vision-Language Models?
+# Is Visual Fruit Detection Solved by Vision-Language Models, and What Remains? — In the GPT-6 Astra Era and Beyond
 
-*September 15, 2026*
+Sep 15, 2026
 
-Fruit detection has occupied much of my research time. The frustrating part is rarely getting a good result on one dataset. It is getting that result again in another greenhouse/orchard/field, under different lighting, with different varieties, growing practices, and patterns of occlusion. Even within a single crop, appearance varies enormously; I identifies this variability as a central obstacle to fruit perception. 
+Detecting fruit in images has been a long-standing challenge in agricultural computer vision. It is hard not because we cannot achieve high accuracy on a specific dataset, but because real-world scenarios are highly variable. No two orchards look the same, and the same type of fruit can look very different depending on the environment (weather, lighting, occlusion, etc.) and the fruit itself (variety and horticultural practices). Most deep learning-based fruit detection methods rely on large amounts of labelled data to cover the variability (distribution) in the real world. Detection in out-of-distribution (OOD) scenarios often fails. Unfortunately, due to the inherent variability of real-world conditions and data privacy issues, fruit detection always has to deal with OOD scenarios. This means that one often cannot deploy a model trained in one orchard directly to another orchard without fine-tuning it with new data.
 
-In my own work, I have explored domain adaptation, generative adversarial networks (GANs), and ways to learn from foundation models. These approaches have helped, but I have continued to ask a simpler question: **could a general-purpose model already understand the scene well enough that we no longer need to train a new fruit detector for every deployment?**
+My collaborators and I have been working on improving the generalizability of fruit detection models for a while and have tried many methods, including domain adaptation, GANs (generative adversarial networks) [1], and learning from foundation models [2,3]. These methods have shown improvements, but they are still far from solving the problem.
 
-I have periodically tried vision-language models (VLMs) for this purpose. My earlier experiments often produced plausible descriptions but left me unconvinced about precise localization. GPT-6 Astra made me reconsider. In the comparison below, it achieves **87.7% detection F1 on StrawDI**, without task-specific training in our experiment, versus **71.8–73.3%** for the other tested VLM configurations.
+In the meantime, I have always paid attention to vision-language models (VLMs), which are pre-trained on large-scale image–text pairs and have shown impressive generalization ability across many vision tasks. I have been wondering whether VLMs can help with fruit detection and have kept testing them on fruit detection tasks. However, the results were not promising, especially for precise detection.
 
-That is a substantial improvement. It is also narrower than saying that every detection task is solved. This post explains what we measured, why some apparent errors deserve a closer look, and what still separates an impressive visual model from a practical perception system.
+General-purpose vision-language models have shown impressive visual recognition and reasoning abilities, including the ability to identify fruits across diverse scenes without task-specific training. However, their performance on precise detection has historically been less reliable, as we can see in the experiments below. Several factors may have contributed to this gap. First, there has often been a training-objective mismatch: many VLMs were trained primarily for image–text alignment, captioning, visual question answering, and instruction following rather than exhaustive instance-level localization [4]. Second, strong semantic representations do not necessarily imply equally precise spatial representations; a model may understand what objects are present without representing where every instance is with the same accuracy [4,5]. Third, visual resolution and tokenization may limit small and dense object perception, particularly when many similar objects occupy only a small number of visual tokens [6]. These should be viewed as characteristics of earlier and current VLM designs rather than fundamental limitations, as newer multimodal models such as GPT-6 Astra may substantially change this trade-off.
+
+What motivated me to re-evaluate VLMs for fruit detection was the release of GPT-6 Astra. I had seen surprisingly strong results from Astra on tasks that appear to require substantial visual grounding and spatial understanding—for example, reconstructing and creating complex 3D scenes using tools such as Blender [7], and directly controlling robotic manipulators without task-specific policy training [8,9]. In one recent evaluation, Astra, used directly as a robot policy, even exceeded the reported performance of a specialized VLA baseline [8]. Astra has also set new highs on several visual-spatial and 3D reconstruction evaluations [7]. These results made me wonder whether the capabilities of general-purpose VLMs had reached a point where they could also achieve state-of-the-art performance on fruit detection—or, more broadly, on conventional visual detection tasks.
+
+In this blog, I will share my experience using GPT-6 Astra and other VLMs for fruit detection, examine what has changed compared with earlier generations of VLMs, and explain why the results surprised me so much.
+
+[#	Reference
+[1]	Fei, Z., Olenskyj, A. G., Bailey, B. N., & Earles, M. (2021). Enlisting 3D crop models and GANs for more data-efficient and generalizable fruit detection. Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV), 1269–1277.
+[2]	Wang, Y., Fei, Z., Li, R., & Ying, Y. (2025). Learn from foundation model: Fruit detection model without manual annotation. Pattern Recognition, 112799.
+[3]	Wang, Y., Li, W., Ying, Y., & Fei, Z. (2026). GEAR-Seg: A Grounded Explainable Agent for Reasoning Segmentation and Data Engine. arXiv preprint arXiv:2607.00544.
+[4]	Ranasinghe et al. (2024). Learning to Localize Objects Improves Spatial Reasoning in Visual-LLMs. CVPR 2024.
+[5]	Schaumloffel et al. (2026). Mechanisms of Object Localization in Vision-Language Models. CVPR 2026.
+[6]	SOUBench: Benchmarking Small-Object Understanding in Multimodal Large Language Models. 2026.
+[7]	OpenAI. (2026). GPT-6 Astra: The Next Generation in Intelligence for Work. https://openai.com/index/gpt-6-astra-next-generation-work/
+[8]	Su et al. (2026). GPT-6 Astra as an Embodied Policy. https://anonymous-report-421.github.io/public-website/?lang=en&view=1
+[9]	Robocurve. (2026). GPT-6 Astra on Robotic Manipulation. https://openai.robocurve.org/gpt-6-astra/]
 
 ## A common experiment on StrawDI
 
@@ -159,7 +174,7 @@ This suggests a flexible interface for agricultural perception. An inventory can
 
 These images come from our own collection and were not publicly released before this evaluation. That makes them a useful check beyond the public benchmark. However, private collection alone cannot prove absence from every possible training source, nor does it establish that the visual conditions lie outside the model’s training distribution. I interpret the results as qualitative evidence of transfer to our deployment setting. The frames have no ground-truth annotations, so they do not establish detection or picking accuracy.
 
-## Current limitations and future directions
+## Current limitations of using VLMs as detection models and future directions
 
 ### Latency is still far from a real-time detector
 

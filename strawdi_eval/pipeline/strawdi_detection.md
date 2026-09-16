@@ -127,9 +127,38 @@ python3 strawdi_eval/verify_strawdi_run.py strawdi_eval/runs/<run dir>
 ```
 
 The claude CLI child needs network and write access outside a read-only
-sandbox (escalate). Codex is wired (`--provider codex`) but not validated on
-this dataset. The scorer self-checks live in `test_scoring.py` (includes an
-agreement test against the base harness's `_iou`).
+sandbox (escalate). Codex (`--provider codex`) is validated (k3, 2026-09-15;
+regenerate `vlm_eval/model_catalog_vision.json` with `make_catalog.py` after
+any catalog change). The scorer self-checks live in `test_scoring.py`
+(includes an agreement test against the base harness's `_iou`).
+
+### `--provider agy` (Antigravity CLI, e.g. Gemini 3.8 Flash)
+
+```bash
+python3 strawdi_eval/run_detection_eval.py --provider agy --jobs 3 --tag full
+# default model gemini-3.8-flash-high; override with --agy-model / --model
+```
+
+agy changes ONE invariant fundamentally, and every agy report says so: it has
+**no headless image attachment** (stream-json input is text-only, `@path`
+mentions are literal text) and **no API-level tool-off**. Delivery therefore
+goes through the built-in `view_file` tool — the frame is staged as the ONLY
+file of a fresh per-call temp workspace (no `.agents` up-tree), the prompt
+names that exact path, and the model must call `view_file` once. Discipline
+is enforced by the workspace (anything but a workspace read is denied
+headlessly) and verified by the event-stream scan: any tool step other than
+`view_file` on the staged frame, and any denied action, lands in
+`tool_attempts` and fails the record. Expect occasional agentic detours
+(a denied `run_command` and an empty reply); they are recorded as failures,
+never hidden.
+
+Measured on agy 1.2.3: `view_file` shows the model the frame **resampled to
+800×600**. The prompt therefore speaks the 800×600 coordinate space (same
+text, parameterised), and the harness scales every reported bbox back by
+(1008/800, 756/600) = 1.26 before scoring. The synthetic control gates this
+whole chain per run (code + circle + square, after the same rescale). Fine
+detail is softer than in the codex/claude runs — a delivery-path handicap,
+worst on the small stratum; compare like with like.
 
 The base-harness gates all carry over unchanged:
 
@@ -163,6 +192,31 @@ and the synthetic control stay PNG.
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-09-14 | glm-5.3-flash (claude) | 100 | 1.0 px | **0.698** (0.775 / 0.635) | 0.283 | **v0.1 nine-field prompt (superseded)** — parse rate 82% (8× transport errors, 9× field-level schema violations, 1× arithmetic-in-bbox); centre-F1 0.861; count bias −1.0; recall large/medium/small = 0.99/0.70/0.04; $7.54, 49 min |
 | 2026-09-15 | glm-5.3-flash (claude) | 100 | 1.4 px | **0.733** (0.815 / 0.666) | 0.352 | **v0.2 eight-field prompt + retry policy (harness v0.2.2)** — parse rate 99%: 5 schema-invalid replies, 4 recovered by the one-shot same-effort retry (frame 1367 failed twice on an invented `occlusion_note`); centre-F1 0.856; AP@50 0.653; count bias −1.04; recall large/medium/small = 0.99/0.75/0.02; matched IoU 0.79 (occl <25) vs 0.70 (≥25); $6.24, 35 min |
+| 2026-09-15 | k3 (codex) | 100 | 0.0 px | **0.7493** (0.824 / 0.687) | 0.4269 | harness v0.2.4 — parse rate 100% (4 retried, all recovered); centre-F1 0.877; AP@50 0.664; count bias −0.95; recall large/medium/small = 1.00/0.77/0.05; matched IoU 0.86 (occl <25) vs 0.73 (≥25); 37 min |
+| 2026-09-16 | gemini-3.8-flash-high (agy) | 100 | 0.0 px | **0.2569** (0.294 / 0.228) | 0.0525 | **first `--provider agy` batch** — delivery via the sanctioned `view_file` call on a staged single-file workspace, frame resampled to 800×600, bboxes rescaled ×1.26 harness-side (see §4 provider section before comparing). Parse rate 73%: 16 malformed-JSON `parse_error` (e.g. a stray `"label": "redness_pct"` key — never retried, per policy) + 11 `empty` on a mid-run auth transport outage (`oauth2 userinfo EOF`, both attempts failed); 0 tool attempts across all 100 calls. On the 73 parsed frames: centre-F1 0.456; count bias −1.19; recall large/medium/small = 0.40/0.19/0.00; matched IoU 0.85 — boxes land near fruit but loosely (the 800×600 resample + weaker localisation), which is what sinks IoU-thresholded metrics; 76 min |
+
+## 6b. The 2026-09-16 agy failure-retry chain (how retries are handled)
+
+Failures are retried as SEPARATE runs over a subset manifest
+(`retry_failures_*.json`, built from the failed records, `retry_of` recorded);
+a run directory is never edited after the fact. Each retry run gates on its
+own control and verifies on its own. The agy full run's 27 failures (16
+malformed-JSON `parse_error` + 11 `empty` from an agy auth/eligibility outage:
+`oauth2 userinfo EOF`, later `loadCodeAssist` POST failures — a transport
+problem, retried per policy and recorded) went through four retry batches:
+
+* retry1 (VALID): 12 of 27 recovered; the outage returned mid-run (14 empty).
+* retry2 (VALID): 4 more recovered (89/100 frames validly parsed in total).
+* retry3/retry4 (**INVALID — control gate failed**): between 12:51 and 13:37
+  the endpoint started answering the control with a deterministic 40 px
+  red-circle miss (`[700,100]` vs true `[650,100]` delivered, byte-identical
+  across batches) while still reading the code, the green square, and the
+  1008×756 probe EXACTLY — a silent served-side behaviour change, not a
+  delivery-transform change (the probe re-verified the 800×600 resample
+  minutes before). The gate did its job; both batches are INVALID. Every one
+  of the 100 frames HAS parsed at least once — but 11 only inside those two
+  INVALID batches, so valid coverage stays 89/100 until the endpoint passes
+  the control again.
 
 ## 7. Known behaviours
 

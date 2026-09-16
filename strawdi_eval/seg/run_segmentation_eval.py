@@ -1,30 +1,39 @@
 #!/usr/bin/env python3
-"""StrawDI detection eval — run the VLM inventory pipeline over StrawDI_Db1.
+"""StrawDI segmentation eval — VLM instance masks over StrawDI_Db1.
 
-Executes the ONE prompt of the StrawDI pipeline (``inventory_detection``: the
-base harness's unbiased inventory, detection-only — eight fields, no picking
-point, no nomination, boxes cover the fruit body only) on every manifest
-sample, then scores the inventories as multi-instance detection against the
-mask-derived ground-truth boxes.
+Executes the ONE prompt of the seg pipeline (``inventory_segmentation``: the
+detection pipeline's nine-field inventory — the eight detection fields plus a
+``polygon`` tracing each fruit's VISIBLE surface) on manifest samples, then
+scores the polygons as multi-instance segmentation against the raw StrawDI
+ground-truth masks (the label id-map PNGs the detection pipeline only used to
+derive boxes). The reported bboxes are additionally scored with the detection
+scorer unchanged, as a cross-check that stays comparable with the
+``strawdi_eval`` box pipeline.
 
 The base harness (``vlm_eval/``) supplies everything model-facing: the
-provider stack (claude/codex CLIs, tool surfaces off, images as base64 blocks),
-the reply parser and the synthetic vision-delivery control. This script adds
-only what is StrawDI-specific — detection scoring, GT-box overlays, and its own
-report. The base-harness invariants carry over unchanged:
+provider stack (claude/codex CLIs, tool surfaces off, images as base64
+blocks), the reply parser and the synthetic vision-delivery control. This
+script adds only the mask scoring, the GT-mask overlays and its own report.
+The base-harness invariants carry over unchanged:
 
 1. the synthetic vision-delivery control runs FIRST and invalidates the batch
    on failure;
 2. all tool surfaces stay disabled (``--tools "" --safe-mode
    --strict-mcp-config --no-session-persistence``, empty agent_cwd; the event
    stream is scanned for tool_use and any attempt fails acceptance);
-3. no annotated image is ever an input (GT masks are only read after the call);
+3. no annotated image is ever an input (label masks are only read AFTER the
+   call, sha256-guarded against the manifest snapshot);
 4. inputs stay inside the no-resize ceiling (the manifest builder enforces it);
 5. every record and report states harness, base harness, model and effort.
 
+This pipeline lives in ``strawdi_eval/seg/`` — deliberately outside the
+detection harness's fingerprint glob (top-level ``strawdi_eval/*.py``,
+``lib/``, ``schema/``) so the two pipelines' provenance stay independent,
+same trick as ``agent_bridge/``.
+
 Usage (repo root):
-    python3 strawdi_eval/run_detection_eval.py --jobs 3 --tag full
-    python3 strawdi_eval/verify_strawdi_run.py strawdi_eval/runs/<dir>
+    python3 strawdi_eval/seg/run_segmentation_eval.py --limit 1 --tag smoke
+    python3 strawdi_eval/seg/verify_strawdi_seg_run.py strawdi_eval/seg/runs/<dir>
 """
 
 from __future__ import annotations
@@ -43,45 +52,53 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from PIL import Image
 
-HERE = Path(__file__).resolve().parent
-REPO = HERE.parent
+HERE = Path(__file__).resolve().parent          # strawdi_eval/seg
+STRAWDI = HERE.parent                            # strawdi_eval
+REPO = STRAWDI.parent                            # repo root
 sys.path.insert(0, str(REPO))
 
 from vlm_eval.lib import imaging, parse  # noqa: E402
 import vlm_eval.run_vlm_eval as vre  # noqa: E402
-from strawdi_eval.lib import prompt as strawdi_prompt  # noqa: E402
-from strawdi_eval.lib import render, scoring  # noqa: E402
+from strawdi_eval.lib import scoring as det_scoring  # noqa: E402
+from strawdi_eval.seg.lib import prompt as seg_prompt  # noqa: E402
+from strawdi_eval.seg.lib import render, seg_scoring  # noqa: E402
 
-HARNESS_NAME = "strawdi_eval"
-HARNESS_VERSION = "0.2.4"
+HARNESS_NAME = "strawdi_seg"
+HARNESS_VERSION = "0.1.0"
 
-# The pipeline's single prompt and its answer schema: the base harness's
-# unbiased inventory, detection-only — eight per-fruit fields, no picking
-# point, no nomination. See lib/prompt.py for what changed vs inventory_plain.
-STYLE_NAME = strawdi_prompt.STYLE_NAME
-SCHEMA_PATH = HERE / "schema" / "inventory_detection_schema.json"
+# The pipeline's single prompt and its answer schema: the detection
+# inventory's eight fields PLUS a polygon of the visible surface (nine
+# fields). See lib/prompt.py for the contract.
+STYLE_NAME = seg_prompt.STYLE_NAME
+SCHEMA_PATH = HERE / "schema" / "inventory_segmentation_schema.json"
 
 DEFAULT_RUNS_DIR = HERE / "runs"
 DEFAULT_JOBS = 3
 CONTACT_SHEET_CHUNK = 24          # per sheet, 3 columns
 
-# Both caveats are printed in every report so a headline number can never be
-# quoted without the semantics that produced it.
+# Printed in every report so a headline number can never be quoted without
+# the semantics that produced it.
+POLYGON_FIDELITY_NOTE = (
+    "The polygon contract bounds fidelity: straight segments between <= 32 "
+    "whole-pixel vertices, rasterised with PIL polygon semantics. A "
+    "strawberry outline needs perimeter-level detail the vertex budget "
+    "mostly covers, and the raster boundary vs the annotated pixel set adds "
+    "small systematic noise — expect a mask-IoU ceiling a fraction below 1 "
+    "even for a perfect outliner."
+)
 BBOX_SEMANTICS_NOTE = (
-    "The prompt asks for the box of the WHOLE fruit (including parts hidden "
-    "behind occluders), while StrawDI ground truth annotates the VISIBLE mask "
-    "surface only. Predictions on partly occluded fruit are therefore expected "
-    "to EXCEED the GT box and lose IoU — the bias is one-directional and hits "
-    "heavily occluded fruit hardest. IoU@0.5 stays the primary metric (it is "
-    "the standard, prompt-faithful read); the symmetric centre-containment "
-    "metric is reported alongside as a semantics-robust presence check, and "
-    "the occlusion-split diagnostic quantifies the gap."
+    "The box cross-check inherits the detection pipeline's semantics gap: "
+    "the prompt asks for the WHOLE-fruit box while StrawDI ground truth "
+    "annotates the VISIBLE mask surface, so occluded-fruit boxes lose IoU "
+    "by construction. The polygon metric has NO such gap — it asks for the "
+    "visible surface and is scored against the visible surface."
 )
 CONFIDENCE_TIE_NOTE = (
     "AP ranks predictions by the model's confidence_pct. Inventory confidences "
     "tend to clump near 100, under which the ranking is arbitrary and AP "
-    "collapses toward the single F1 operating point. F1@IoU-0.5 is the "
+    "collapses toward the single F1 operating point. F1@mask-IoU-0.5 is the "
     "headline; AP is secondary and its tie-breaks (confidence, then inventory "
     "order) are deterministic."
 )
@@ -92,7 +109,11 @@ CONFIDENCE_TIE_NOTE = (
 # ---------------------------------------------------------------------------
 
 def harness_info() -> dict:
-    """Fingerprint of THIS pipeline's code (not the base harness's)."""
+    """Fingerprint of THIS pipeline's code (not the base harness's).
+
+    Hashes the seg subtree only — adding files to the detection pipeline
+    must not shift this fingerprint, and vice versa.
+    """
     digest = hashlib.sha256()
     files = (sorted(HERE.glob("*.py")) + sorted((HERE / "lib").glob("*.py"))
              + sorted((HERE / "schema").glob("*.json")))
@@ -110,11 +131,7 @@ def harness_info() -> dict:
 
 def run_dir_name(stamp: str, model: str, effort: str | None,
                  tag: str = "", cli: str = "") -> str:
-    """``<ts>-<model>-<effort>-<cli>-strawdi_eval[-<tag>]`` (base convention).
-
-    Reimplemented here because the base function hardcodes its own harness
-    name into the tail.
-    """
+    """``<ts>-<model>-<effort>-<cli>-strawdi_seg[-<tag>]`` (base convention)."""
     parts = [stamp, vre.slugify(model), vre.slugify(effort or "default")]
     if cli:
         parts.append(vre.slugify(cli))
@@ -125,18 +142,49 @@ def run_dir_name(stamp: str, model: str, effort: str | None,
 
 
 # ---------------------------------------------------------------------------
+# Ground truth masks (read AFTER the call, sha256-guarded — never an input)
+# ---------------------------------------------------------------------------
+
+def load_gt_masks(sample: dict) -> list[np.ndarray]:
+    """Per-instance bool masks from the label id-map PNG, manifest-verified.
+
+    Same derivation order as ``build_manifest.derive_instances`` (sorted
+    instance ids), so masks align 1:1 with the manifest's ``gt_boxes`` /
+    ``gt_areas``. Raises on any drift or damage — the caller records the
+    error rather than scoring against unverified ground truth.
+    """
+    label_path = Path(sample["label_image"])
+    digest = hashlib.sha256(label_path.read_bytes()).hexdigest()
+    if digest != sample["label_sha256"]:
+        raise RuntimeError(f"{label_path.name}: sha256 drifted from the "
+                           f"manifest snapshot (label file changed?)")
+    with Image.open(label_path) as label_img:
+        mask = np.array(label_img)
+    h, w = sample["image_shape_hw"]
+    if mask.dtype != np.uint8 or mask.ndim != 2 or mask.shape != (h, w):
+        raise RuntimeError(f"{label_path.name}: unexpected label array "
+                           f"{mask.dtype} {mask.shape} (uint8 {h}x{w} expected)")
+    ids = sorted(int(v) for v in np.unique(mask) if v != 0)
+    return [mask == instance_id for instance_id in ids]
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--manifest", type=Path, default=HERE / "manifest.json")
+    ap.add_argument("--manifest", type=Path, default=STRAWDI / "manifest.json",
+                    help="the StrawDI manifest (frames + GT provenance); the seg "
+                         "pipeline reuses the detection pipeline's manifest as-is")
     ap.add_argument("--out", type=Path, default=DEFAULT_RUNS_DIR,
                     help="runs root; a timestamped subdirectory is created inside it")
     ap.add_argument("--tag", default="", help="suffix for the run directory name")
     ap.add_argument("--limit", type=int, default=None,
                     help="max samples (manifest order)")
+    ap.add_argument("--sample-id", default=None,
+                    help="run a single manifest sample by id (e.g. 108)")
     ap.add_argument("--model", default=None, help="model slug")
     ap.add_argument("--reasoning-effort", default=None,
                     help="reasoning effort override; default keeps the provider's")
@@ -183,27 +231,25 @@ def build_prompt(args, sample: dict) -> str:
     # coordinate space; the delivery notice (with the staged path) is appended
     # by the provider inside call_model_agy, replacing the no-tools notice.
     pw, ph = vre.prompt_frame_size(args, w, h)
-    prompt = strawdi_prompt.build_inventory_detection(frame_w=pw, frame_h=ph)
+    prompt = seg_prompt.build_inventory_segmentation(frame_w=pw, frame_h=ph)
     if args.provider == "agy":
         return prompt
     return f"{prompt}\n\n{vre.TOOL_NOTICE}"
 
 
-# The per-fruit attributes kept from the inventory (everything the eight-field
-# prompt asks for besides bbox, which the scorer reads separately).
-DETECTION_ATTRS = ("redness_pct", "occlusion_pct", "calyx_visible",
-                   "peduncle_visible", "graspable", "confidence_pct",
-                   "description")
+# The per-fruit attributes kept from the inventory (the eight detection
+# fields plus the polygon; the scorer reads bbox/polygon separately).
+SEG_ATTRS = ("redness_pct", "occlusion_pct", "calyx_visible",
+             "peduncle_visible", "graspable", "confidence_pct",
+             "description", "polygon")
 
 
-def classify_detection(last_message: str, schema: dict) -> dict:
-    """Parse a detection-only inventory (eight fields, no nomination).
+def classify_segmentation(last_message: str, schema: dict) -> dict:
+    """Parse a segmentation inventory (nine fields, polygon included).
 
-    Mirrors the base harness's ``classify_inventory`` minus everything
-    picking-oriented: no ``picking_point``, no ``target_index``. A bare
-    top-level list is accepted and wrapped. Statuses: ``ok`` or the explicit
-    failure statuses — ``no_pick_point`` can no longer occur (kept accepted
-    downstream only so v0.1 runs still rebuild).
+    Mirrors the detection harness's ``classify_detection`` with the polygon
+    normalised alongside the bbox. A bare top-level list is accepted and
+    wrapped.
     """
     result = {
         "status": None, "json_method": None, "schema_valid": None,
@@ -233,7 +279,7 @@ def classify_detection(last_message: str, schema: dict) -> dict:
     for entry in payload["strawberries"]:
         box = parse.normalise_box(entry.get("bbox"))
         berry = {"bbox": list(box) if box else None}
-        berry.update({key: entry.get(key) for key in DETECTION_ATTRS})
+        berry.update({key: entry.get(key) for key in SEG_ATTRS})
         berries.append(berry)
 
     result["strawberries"] = berries
@@ -242,25 +288,33 @@ def classify_detection(last_message: str, schema: dict) -> dict:
     return result
 
 
-def detection_block(record: dict) -> dict:
-    """Score a parsed record's inventory against its GT boxes.
+def mask_block(status: str, inventory, gt_masks, gt_areas, frame_w: int,
+               frame_h: int, n_gt: int) -> dict:
+    """Score a parsed record's polygons against its GT instance masks.
 
-    Failure statuses (empty/refused/parse/exec/schema) carry no detection
-    *numbers* at all — never zeros. ``n_gt`` is kept everywhere: it is a
-    property of the sample, not a score, and the count-error accounting needs
-    it. A parsed inventory reporting ZERO fruit is a valid answer and scores
-    as all-missed.
+    Failure statuses — and any record whose GT masks could not be loaded and
+    verified — carry no mask *numbers* at all, never zeros (``n_gt`` is kept:
+    a property of the sample). A parsed inventory reporting ZERO fruit is a
+    valid answer and scores as all-missed.
     """
-    if record["status"] not in (parse.OK, parse.NO_PICK_POINT):
-        return {**scoring.empty_detection(), "n_gt": len(record["gt_boxes"])}
-    return scoring.score_image(record["inventory"], record["gt_boxes"],
-                               record["gt_areas"], record["frame_w"],
-                               record["frame_h"])
+    if status not in (parse.OK, parse.NO_PICK_POINT) or gt_masks is None:
+        return {**seg_scoring.empty_masks(), "n_gt": n_gt}
+    return seg_scoring.score_masks_image(inventory, gt_masks, gt_areas,
+                                         frame_w, frame_h)
+
+
+def box_metrics_block(status: str, inventory, gt_boxes, gt_areas,
+                      frame_w: int, frame_h: int) -> dict:
+    """The detection scorer, unchanged, on the ASKED bboxes (cross-check)."""
+    if status not in (parse.OK, parse.NO_PICK_POINT):
+        return {**det_scoring.empty_detection(), "n_gt": len(gt_boxes)}
+    return det_scoring.score_image(inventory, gt_boxes, gt_areas,
+                                   frame_w, frame_h)
 
 
 def run_one(args, manifest, sample, run_ctx) -> dict:
     """Execute (and if needed retry) one model call, then score it."""
-    image = HERE / sample["images"]["raw"]
+    image = STRAWDI / sample["images"]["raw"]
     h, w = sample["image_shape_hw"]
     prompt = build_prompt(args, sample)
     schema = json.loads(SCHEMA_PATH.read_text())
@@ -278,7 +332,7 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
                              args.timeout)
     attempts.append(attempt)
 
-    scored = classify_detection(attempt["last_message"], schema)
+    scored = classify_segmentation(attempt["last_message"], schema)
     do_retry = False
     retry_effort = None
     if scored["status"] == parse.EMPTY_RESPONSE and effort != "low":
@@ -288,12 +342,9 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
         fallback_reason = "empty response at configured reasoning effort"
         do_retry = True
     elif scored["status"] == parse.SCHEMA_INVALID:
-        # One recorded resample at the SAME effort. A schema violation is either
-        # a field-level contract break by the model or transport-error text the
-        # CLI surfaced as the reply; neither is a reasoning-budget problem, so
-        # the retry measures the same configuration as the first attempt.
-        # NB: effort may be None (provider default) — that IS the same effort,
-        # so the decision needs its own flag, not a None sentinel.
+        # One recorded resample at the SAME effort (polygon replies are long;
+        # a vertex over the 32 cap or a malformed pair is a contract break,
+        # not a reasoning-budget problem).
         retry_effort = effort
         fallback_reason = "schema-invalid reply, one resample at same effort"
         do_retry = True
@@ -305,17 +356,32 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
                                args.timeout)
         retry["fallback_of_attempt"] = 1
         attempts.append(retry)
-        scored = classify_detection(retry["last_message"], schema)
+        scored = classify_segmentation(retry["last_message"], schema)
 
     totals = vre.merge_usage(attempts)
     parsed_ok = scored["status"] in (parse.OK, parse.NO_PICK_POINT)
     inventory = scored["strawberries"] if parsed_ok else None
     if inventory and args.provider == "agy":
         # The model answered in the delivered 800x600 frame; scale every bbox
-        # back to the original 1008x756 space before scoring. Everything
-        # downstream (detection block, overlays, rebuild) sees original coords.
-        inventory = [dict(item, bbox=vre.agy_scale_box(item["bbox"], w, h))
+        # and polygon vertex back to the original coordinate space before
+        # scoring. Everything downstream sees original coords.
+        def scale_point(pt):
+            return [int(round(v)) for v in vre.agy_scale_point(pt, w, h)]
+        inventory = [dict(item,
+                          bbox=vre.agy_scale_box(item["bbox"], w, h)
+                          if item.get("bbox") else None,
+                          polygon=[scale_point(pt) for pt in item["polygon"]]
+                          if item.get("polygon") else None)
                      for item in inventory]
+
+    # GT masks are read only NOW (after the call) and verified against the
+    # manifest's sha256 — the label PNGs must never be inputs. A load failure
+    # keeps the answer but leaves the mask block unscored (never zeros).
+    gt_masks, gt_mask_error = None, None
+    try:
+        gt_masks = load_gt_masks(sample)
+    except Exception as exc:
+        gt_mask_error = f"{type(exc).__name__}: {exc}"
 
     record = {
         "run_id": stem,
@@ -356,14 +422,19 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
         "n_strawberries": scored["n_strawberries"] if parsed_ok else None,
         **vre._inventory_summary(inventory),
         # Ground truth rides inside the record so the run is self-contained
-        # and --rebuild-report can re-score without the dataset.
+        # and --rebuild-report can re-score the BOX cross-check without the
+        # dataset. Mask re-scoring needs the label PNGs (mount present).
         "gt_boxes": sample["gt_boxes"],
         "gt_areas": sample["gt_areas"],
-        **detection_block({
-            "status": scored["status"], "inventory": inventory,
-            "gt_boxes": sample["gt_boxes"], "gt_areas": sample["gt_areas"],
-            "frame_w": w, "frame_h": h,
-        }),
+        "label_image": sample["label_image"],
+        "label_sha256": sample["label_sha256"],
+        "gt_masks_loaded": gt_masks is not None,
+        "gt_mask_error": gt_mask_error,
+        **mask_block(scored["status"], inventory, gt_masks,
+                     sample["gt_areas"], w, h, sample["n_gt"]),
+        "box_metrics": box_metrics_block(scored["status"], inventory,
+                                         sample["gt_boxes"], sample["gt_areas"],
+                                         w, h),
         **totals,
         "attempts": len(attempts),
         "fallback_used": fallback_used,
@@ -402,8 +473,8 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
     rel = Path("overlays") / f"{stem}.jpg"
     try:
         raw = imaging.load_rgb(image)
-        overlay = render.draw_detection_overlay(
-            raw, inventory, sample["gt_boxes"],
+        overlay = render.draw_segmentation_overlay(
+            raw, inventory, gt_masks, sample["gt_boxes"],
             record["matches_50"], record["fn_gt_indices_50"], title)
         imaging.save_jpg(overlay, run_ctx["run_dir"] / rel)
         record["overlay"] = str(rel)
@@ -436,7 +507,12 @@ def failure_record(sample: dict, exc: BaseException, run_ctx) -> dict:
         "prompt": None, "inventory": None, "n_strawberries": None,
         **vre._inventory_summary(None),
         "gt_boxes": sample["gt_boxes"], "gt_areas": sample["gt_areas"],
-        **{**scoring.empty_detection(), "n_gt": sample["n_gt"]},
+        "label_image": sample["label_image"],
+        "label_sha256": sample["label_sha256"],
+        "gt_masks_loaded": False,
+        "gt_mask_error": f"{type(exc).__name__}: {exc}",
+        **{**seg_scoring.empty_masks(), "n_gt": sample["n_gt"]},
+        "box_metrics": {**det_scoring.empty_detection(), "n_gt": sample["n_gt"]},
         "input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0,
         "reasoning_output_tokens": 0, "total_tokens": 0,
         "attempts": 0, "fallback_used": False, "fallback_reason": None,
@@ -457,10 +533,13 @@ def _mean(values) -> float | None:
     return round(float(np.mean(values)), 4) if values else None
 
 
-def detection_summary(records: list[dict]) -> dict:
+def seg_summary(records: list[dict], mask_ap: dict | None) -> dict:
     """Every batch-level number the report prints, derived from records only."""
     parsed = [r for r in records
               if r["status"] in (parse.OK, parse.NO_PICK_POINT)]
+    # Mask metrics only over records that actually scored against verified GT
+    # masks (gt_masks_loaded); everything else carries None, never zeros.
+    scored = [r for r in parsed if r.get("tp_50") is not None]
     failed = [r for r in records if r["status"] in parse.FAILURE_STATUSES]
 
     summary = {
@@ -470,6 +549,8 @@ def detection_summary(records: list[dict]) -> dict:
         "schema_valid_rate": _rate(records, lambda r: r.get("schema_valid") is True),
         "ok": sum(1 for r in parsed if r["status"] == parse.OK),
         "no_pick_point": sum(1 for r in parsed if r["status"] == parse.NO_PICK_POINT),
+        "mask_scored": len(scored),
+        "mask_unscored_gt_error": sum(1 for r in parsed if r.get("tp_50") is None),
         "failures_by_status": {
             status: sum(1 for r in failed if r["status"] == status)
             for status in sorted({r["status"] for r in failed})
@@ -480,50 +561,65 @@ def detection_summary(records: list[dict]) -> dict:
             and r["status"] in (parse.OK, parse.NO_PICK_POINT)),
     }
 
-    for threshold in scoring.IOU_THRESHOLDS:
+    # Primary metric: the mask-IoU ladder.
+    for threshold in seg_scoring.IOU_THRESHOLDS:
         key = int(round(threshold * 100))
-        tp = sum(r.get(f"tp_{key}") or 0 for r in parsed)
-        fp = sum(r.get(f"fp_{key}") or 0 for r in parsed)
-        fn = sum(r.get(f"fn_{key}") or 0 for r in parsed)
-        p, recall, f1 = scoring.precision_recall_f1(tp, fp, fn)
+        tp = sum(r.get(f"tp_{key}") or 0 for r in scored)
+        fp = sum(r.get(f"fp_{key}") or 0 for r in scored)
+        fn = sum(r.get(f"fn_{key}") or 0 for r in scored)
+        p, recall, f1 = det_scoring.precision_recall_f1(tp, fp, fn)
         summary[f"tp_{key}"], summary[f"fp_{key}"], summary[f"fn_{key}"] = tp, fp, fn
         summary[f"precision_{key}"] = p
         summary[f"recall_{key}"] = recall
         summary[f"f1_{key}"] = f1
 
-    tp = sum(r.get("tp_center") or 0 for r in parsed)
-    fp = sum(r.get("fp_center") or 0 for r in parsed)
-    fn = sum(r.get("fn_center") or 0 for r in parsed)
-    p, recall, f1 = scoring.precision_recall_f1(tp, fp, fn)
-    summary.update({"tp_center": tp, "fp_center": fp, "fn_center": fn,
-                    "precision_center": p, "recall_center": recall,
-                    "f1_center": f1})
-
-    matched_ious = [m["iou"] for r in parsed for m in (r.get("matches_50") or [])]
+    matched_ious = [m["iou"] for r in scored for m in (r.get("matches_50") or [])]
     summary["matched_pairs_50"] = len(matched_ious)
     summary["mean_matched_iou_50"] = _mean(matched_ious)
     summary["median_matched_iou_50"] = (round(float(np.median(matched_ious)), 4)
                                         if matched_ious else None)
+    summary["polygon_bbox_iou_mean"] = _mean(
+        [r.get("polygon_bbox_iou_mean") for r in scored])
+    summary["n_polygons_out_of_frame"] = sum(
+        r.get("n_polygons_out_of_frame") or 0 for r in scored)
+    summary["n_polygons_degenerate"] = sum(
+        r.get("n_polygons_degenerate") or 0 for r in scored)
 
-    count_errors = [r["count_error"] for r in parsed if r.get("count_error") is not None]
+    count_errors = [r["count_error"] for r in scored if r.get("count_error") is not None]
     summary["count_error_mean"] = _mean(count_errors)
     summary["count_error_mae"] = _mean([abs(e) for e in count_errors])
-    summary["gt_total"] = sum(r.get("n_gt") or 0 for r in parsed)
-    summary["pred_total"] = sum(r.get("n_pred") or 0 for r in parsed)
+    summary["gt_total"] = sum(r.get("n_gt") or 0 for r in scored)
+    summary["pred_total"] = sum(r.get("n_pred") or 0 for r in scored)
 
-    per_image = [{
+    # Mask AP over the records whose masks re-derived at write time.
+    summary["mask_ap_50"] = (mask_ap or {}).get("ap_50")
+    summary["mask_map_50_95"] = (mask_ap or {}).get("map_50_95")
+    summary["mask_ap_available"] = mask_ap is not None
+
+    # Cross-check: the detection scorer on the ASKED bboxes, unchanged —
+    # directly comparable with the strawdi_eval box pipeline.
+    for threshold in det_scoring.IOU_THRESHOLDS:
+        key = int(round(threshold * 100))
+        tp = sum((r.get("box_metrics") or {}).get(f"tp_{key}") or 0 for r in parsed)
+        fp = sum((r.get("box_metrics") or {}).get(f"fp_{key}") or 0 for r in parsed)
+        fn = sum((r.get("box_metrics") or {}).get(f"fn_{key}") or 0 for r in parsed)
+        p, recall, f1 = det_scoring.precision_recall_f1(tp, fp, fn)
+        summary[f"box_tp_{key}"] = tp
+        summary[f"box_f1_{key}"] = f1
+        if abs(threshold - 0.5) < 1e-9:
+            summary["box_precision_50"], summary["box_recall_50"] = p, recall
+    box_per_image = [{
         "sample_id": r["sample_id"],
-        "preds": scoring.prepare_predictions(r.get("inventory"),
-                                             r["frame_w"], r["frame_h"]),
+        "preds": det_scoring.prepare_predictions(r.get("inventory"),
+                                                 r["frame_w"], r["frame_h"]),
         "gt_boxes": r["gt_boxes"],
     } for r in parsed]
-    aps = scoring.ap_metrics(per_image)
-    summary["ap_50"] = aps["ap_50"]
-    summary["map_50_95"] = aps["map_50_95"]
-    summary["ap_per_threshold"] = aps["per_threshold"]
+    box_aps = det_scoring.ap_metrics(box_per_image)
+    summary["box_ap_50"] = box_aps["ap_50"]
+    summary["box_map_50_95"] = box_aps["map_50_95"]
 
-    summary["size_strata"] = scoring.size_stratified(parsed)
-    summary["occlusion_split"] = scoring.occlusion_split(parsed)
+    summary["size_strata"] = det_scoring.size_stratified(scored)
+    summary["occlusion_split"] = det_scoring.occlusion_split(scored)
     summary["total_input_tokens"] = sum(r.get("input_tokens") or 0 for r in records)
     summary["total_output_tokens"] = sum(r.get("output_tokens") or 0 for r in records)
     summary["total_tokens"] = sum(r.get("total_tokens") or 0 for r in records)
@@ -543,10 +639,10 @@ def _rate(records: list[dict], predicate) -> float | None:
 # Artefacts
 # ---------------------------------------------------------------------------
 
-CSV_DROP = ("prompt", "response_text", "attempts_detail")
+CSV_DROP = ("prompt", "response_text", "attempts_detail", "box_metrics")
 
 
-def write_detection_csvs(run_dir: Path, records: list[dict], summary: dict) -> None:
+def write_seg_csvs(run_dir: Path, records: list[dict], summary: dict) -> None:
     df = pd.DataFrame([{k: v for k, v in r.items() if k not in CSV_DROP}
                        for r in records])
     for column in df.columns:
@@ -556,16 +652,20 @@ def write_detection_csvs(run_dir: Path, records: list[dict], summary: dict) -> N
 
     flat = {k: v for k, v in summary.items()
             if not isinstance(v, (list, dict))}
-    flat["ap_per_threshold"] = json.dumps(summary["ap_per_threshold"])
-    pd.DataFrame([flat]).to_csv(run_dir / "detection_summary.csv", index=False)
+    pd.DataFrame([flat]).to_csv(run_dir / "seg_summary.csv", index=False)
     pd.DataFrame(summary["size_strata"]).to_csv(run_dir / "size_strata.csv",
                                                 index=False)
-    pd.DataFrame([{"iou_threshold": f"{t:.2f}", "ap": ap}
-                  for t, ap in summary["ap_per_threshold"].items()]
-                 ).to_csv(run_dir / "ap.csv", index=False)
+    pd.DataFrame([
+        {"metric": "mask_ap_50", "value": summary.get("mask_ap_50")},
+        {"metric": "mask_map_50_95", "value": summary.get("mask_map_50_95")},
+        {"metric": "box_ap_50", "value": summary.get("box_ap_50")},
+        {"metric": "box_map_50_95", "value": summary.get("box_map_50_95")},
+        {"metric": "box_f1_50", "value": summary.get("box_f1_50")},
+    ]).to_csv(run_dir / "ap.csv", index=False)
 
 
-def _render_all(run_dir: Path, records: list[dict]) -> None:
+def _render_all(run_dir: Path, records: list[dict],
+                masks_by_sample: dict[str, list[np.ndarray]]) -> None:
     """(Re)render every overlay + contact sheets from the records themselves."""
     overlays = run_dir / "overlays"
     shutil.rmtree(overlays, ignore_errors=True)
@@ -581,11 +681,11 @@ def _render_all(run_dir: Path, records: list[dict]) -> None:
                  f"{record.get('n_gt')}gt | {record['status']}")
         rel = Path("overlays") / f"{record['run_id']}.jpg"
         try:
-            raw = imaging.load_rgb(HERE / record["image"])
-            overlay = render.draw_detection_overlay(
+            raw = imaging.load_rgb(STRAWDI / record["image"])
+            overlay = render.draw_segmentation_overlay(
                 raw, record.get("inventory"),
-                record.get("gt_boxes"), record.get("matches_50"),
-                record.get("fn_gt_indices_50"), title)
+                masks_by_sample.get(sample_id), record.get("gt_boxes"),
+                record.get("matches_50"), record.get("fn_gt_indices_50"), title)
             imaging.save_jpg(overlay, run_dir / rel)
             record["overlay"] = str(rel)
             record.pop("render_error", None)
@@ -631,21 +731,26 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
                "BATCH INVALID (vision delivery failed)" if delivered is False
                else "BATCH UNVERIFIED (control skipped)")
     headline = summary.get("f1_50")
-    add(f"# StrawDI detection eval — {verdict}")
+    add(f"# StrawDI segmentation eval — {verdict}")
     add("")
     failed_note = (f"; {summary['calls'] - summary['parsed']} call(s) failed to parse "
                    f"and are excluded from every metric"
                    if summary["calls"] != summary["parsed"] else "")
-    add(f"Headline: **F1@IoU0.5 = {headline}** "
+    unscored_note = (f"; {summary['mask_unscored_gt_error']} parsed call(s) could not "
+                     f"be scored against GT masks (label PNG unavailable/drifted)"
+                     if summary["mask_unscored_gt_error"] else "")
+    add(f"Headline: **F1@mask-IoU0.5 = {headline}** "
         f"(P {summary.get('precision_50')}, R {summary.get('recall_50')}) "
-        f"on {summary['parsed']} of {summary['calls']} parsed frames "
-        f"({summary['gt_total']} GT instances){failed_note}.")
+        f"on {summary['mask_scored']} of {summary['calls']} scored frames "
+        f"({summary['gt_total']} GT instances){failed_note}{unscored_note}.")
+    add(f"Box cross-check (detection scorer, unchanged): "
+        f"F1@IoU0.5 = {summary.get('box_f1_50')} "
+        f"(P {summary.get('box_precision_50')}, R {summary.get('box_recall_50')}).")
     add("")
     add(f"- **Harness:** {info['name']} v{info['version']} "
         f"(fingerprint `{info['fingerprint']}`)")
     add(f"- **Base harness:** {base['name']} v{base['version']} "
-        f"(fingerprint `{base['fingerprint']}`) — provider stack, prompt, "
-        f"parser and control")
+        f"(fingerprint `{base['fingerprint']}`) — provider stack, parser and control")
     add(f"- **Model:** `{model}` via {args.provider} CLI "
         f"({run_summary.get('cli_version', '')})")
     add(f"- **Reasoning effort:** {effort or 'provider default'}")
@@ -682,38 +787,35 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
     if args.provider == "agy":
         fw = manifest['samples'][0]['image_shape_hw'][1]
         fh = manifest['samples'][0]['image_shape_hw'][0]
-        add(f"- Frames delivered via `agy -p` (agy "
-            f"{run_summary.get('cli_version', 'unknown')}): agy has no headless "
-            f"image attachment, so each frame was staged as the ONLY file of a "
-            f"fresh per-call temp workspace and the model fetched it with the "
-            f"built-in `view_file` tool — the one sanctioned tool call. agy has "
-            f"no API-level tool-off (unlike codex/claude): the event stream was "
-            f"scanned and every tool step that is not `view_file` on the staged "
-            f"frame, and every denied action, fails the record.")
-        add(f"- Measured on this agy build: `view_file` shows the model the "
-            f"{fw}x{fh} frame RESAMPLED to "
-            f"{vre.AGY_DELIVERED_W}x{vre.AGY_DELIVERED_H}. The prompt therefore "
-            f"spoke the {vre.AGY_DELIVERED_W}x{vre.AGY_DELIVERED_H} coordinate "
-            f"space and the harness scaled every reported bbox back by "
-            f"({fw}/{vre.AGY_DELIVERED_W}, {fh}/{vre.AGY_DELIVERED_H}) = "
-            f"({fw / vre.AGY_DELIVERED_W:.4f}, {fh / vre.AGY_DELIVERED_H:.4f}) "
-            f"before scoring; the synthetic control gated this chain (see "
-            f"above). Fine detail is softer than in the codex/claude runs — a "
-            f"delivery-path handicap, worst on the small stratum.")
+        add(f"- Frames delivered via `agy -p`: staged as the ONLY file of a fresh "
+            f"per-call temp workspace, fetched with the built-in `view_file` — the "
+            f"one sanctioned tool call. `view_file` resamples the {fw}x{fh} frame "
+            f"to {vre.AGY_DELIVERED_W}x{vre.AGY_DELIVERED_H}; the prompt spoke that "
+            f"space and the harness scaled every bbox AND polygon vertex back "
+            f"before scoring. Fine detail is softer than in the codex/claude "
+            f"runs — a delivery-path handicap, worst on small fruit.")
     else:
         add(f"- Frames delivered unchanged at "
             f"{manifest['samples'][0]['image_shape_hw'][1]}x"
             f"{manifest['samples'][0]['image_shape_hw'][0]} "
             f"(inside the 1280 px no-resize ceiling; GT maps 1:1).")
-    add("- Prompt: `inventory_detection` — the base harness's unbiased "
-        "inventory with the picking-oriented parts removed: EIGHT per-fruit "
-        "fields, no `picking_point`, no `target_index` nomination. Every fruit "
-        "whatever its colour; boxes cover the fruit body only (calyx/stem "
-        "excluded unless lying on the fruit).")
-    add("- Matching: greedy, confidence-descending, one GT per prediction, "
-        "recomputed per threshold at IoU 0.25 / 0.5 / 0.75; centre-containment "
-        "reported alongside.")
-    add(f"- GT boxes: {manifest['coordinate_convention']['bbox']}.")
+    add("- Prompt: `inventory_segmentation` — the detection inventory's EIGHT "
+        "fields PLUS a ninth, `polygon`: an ordered vertex outline of the "
+        "fruit's VISIBLE surface (follows occluder edges, never extrapolates "
+        "the hidden shape; 8-20 vertices typical, 32 max; extent agrees with "
+        "the reported bbox).")
+    add("- Matching: greedy, confidence-descending, one GT mask per polygon, "
+        "recomputed per threshold at mask IoU 0.25 / 0.5 / 0.75. Predictions "
+        "rasterise with PIL polygon semantics; a vertex outside the frame or "
+        "an empty raster is an automatic FP (the box scorer's rule).")
+    add("- GT masks: the StrawDI label id-map PNGs (0 = background, 1..N = "
+        "instance), read AFTER the call, sha256-guarded against the manifest "
+        "snapshot; one bool mask per instance id, same order as the "
+        "manifest's GT boxes.")
+    add("- Box cross-check: the reported bboxes scored by the detection "
+        "pipeline's scorer, unchanged — the bridge to `strawdi_eval` numbers.")
+    add("")
+    add(f"> {POLYGON_FIDELITY_NOTE}")
     add("")
     add(f"> {BBOX_SEMANTICS_NOTE}")
     add("")
@@ -721,12 +823,15 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
     add("")
 
     # Headline metrics
-    add("## Headline metrics")
+    add("## Headline metrics (mask IoU)")
     add("| metric | value |")
     add("| --- | --- |")
     add(f"| calls | {summary['calls']} |")
     add(f"| parsed (ok / no_pick_point) | {summary['parsed']} "
         f"({summary['ok']} / {summary['no_pick_point']}) |")
+    add(f"| scored against GT masks | {summary['mask_scored']}"
+        + (f" ({summary['mask_unscored_gt_error']} unscored)" if summary["mask_unscored_gt_error"] else "")
+        + " |")
     add(f"| parse rate | {summary['parse_rate']} |")
     add(f"| schema-valid rate | {summary['schema_valid_rate']} |")
     for label, extra in (("IoU 0.25", "25"), ("IoU 0.50", "50"), ("IoU 0.75", "75")):
@@ -734,26 +839,40 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
             f"{summary.get(f'recall_{extra}')} / **{summary.get(f'f1_{extra}')}** "
             f"(TP {summary[f'tp_{extra}']} FP {summary[f'fp_{extra}']} "
             f"FN {summary[f'fn_{extra}']}) |")
-    add(f"| P / R / F1 @centre | {summary['precision_center']} / "
-        f"{summary['recall_center']} / {summary['f1_center']} "
-        f"(TP {summary['tp_center']} FP {summary['fp_center']} "
-        f"FN {summary['fn_center']}) |")
-    add(f"| mean / median matched IoU@0.5 | {summary['mean_matched_iou_50']} / "
+    add(f"| mean / median matched mask IoU@0.5 | {summary['mean_matched_iou_50']} / "
         f"{summary['median_matched_iou_50']} over {summary['matched_pairs_50']} pairs |")
-    add(f"| AP@0.50 / mAP@[.50:.95] | {summary['ap_50']} / {summary['map_50_95']} |")
+    add(f"| AP@0.50 / mAP@[.50:.95] (mask) | {summary.get('mask_ap_50')} / "
+        f"{summary.get('mask_map_50_95')}"
+        + ("" if summary.get("mask_ap_available") else " (not recomputed — GT masks "
+           "unavailable at artefact time)") + " |")
+    add(f"| polygon-vs-bbox extent IoU (mean) | {summary['polygon_bbox_iou_mean']} |")
+    add(f"| polygons out-of-frame / degenerate | {summary['n_polygons_out_of_frame']} / "
+        f"{summary['n_polygons_degenerate']} |")
     add(f"| count error (pred − gt) | mean {summary['count_error_mean']}, "
         f"MAE {summary['count_error_mae']} |")
     add(f"| totals | {summary['gt_total']} GT, {summary['pred_total']} predicted |")
-    if summary["failures_by_status"]:
-        add(f"| failures by status | {summary['failures_by_status']} |")
-    if summary.get("retried_calls"):
-        add(f"| retried calls (recovered) | {summary['retried_calls']} "
-            f"({summary['retries_recovered']} parsed after retry; "
-            f"empty→low-effort or schema-invalid→same-effort, all recorded) |")
     add("")
 
+    add("## Box cross-check (detection scorer on the asked bboxes)")
+    add("| metric | value |")
+    add("| --- | --- |")
+    for label, extra in (("IoU 0.25", "25"), ("IoU 0.50", "50"), ("IoU 0.75", "75")):
+        add(f"| F1 @{label} | {summary.get(f'box_f1_{extra}')} "
+            f"(TP {summary[f'box_tp_{extra}']}) |")
+    add(f"| AP@0.50 / mAP@[.50:.95] | {summary['box_ap_50']} / "
+        f"{summary['box_map_50_95']} |")
+    add("")
+    if summary["failures_by_status"]:
+        add(f"failures by status: {summary['failures_by_status']}")
+        add("")
+    if summary.get("retried_calls"):
+        add(f"retried calls (recovered): {summary['retried_calls']} "
+            f"({summary['retries_recovered']} parsed after retry; "
+            f"empty→low-effort or schema-invalid→same-effort, all recorded)")
+        add("")
+
     # Size strata
-    add("## Recall by GT size (COCO bands)")
+    add("## Recall by GT size (COCO bands, mask IoU@0.5)")
     add("| stratum | area px² | n GT | matched | recall | mean IoU@0.5 |")
     add("| --- | --- | --- | --- | --- | --- |")
     for row in summary["size_strata"]:
@@ -763,12 +882,12 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
 
     # Occlusion diagnostic
     occ = summary["occlusion_split"]
-    add("## Occlusion diagnostic (bbox-semantics gap)")
+    add("## Occlusion diagnostic (mask IoU vs reported occlusion)")
     add("| quantity | value |")
     add("| --- | --- |")
-    add(f"| matched IoU@0.5, pred occlusion < 25% | {occ['matched_iou_occl_lt25_mean']} "
+    add(f"| matched mask IoU@0.5, pred occlusion < 25% | {occ['matched_iou_occl_lt25_mean']} "
         f"(n={occ['n_matched_occl_lt25']}) |")
-    add(f"| matched IoU@0.5, pred occlusion ≥ 25% | {occ['matched_iou_occl_ge25_mean']} "
+    add(f"| matched mask IoU@0.5, pred occlusion ≥ 25% | {occ['matched_iou_occl_ge25_mean']} "
         f"(n={occ['n_matched_occl_ge25']}) |")
     add(f"| mean reported occlusion, matched vs unmatched preds | "
         f"{occ['mean_reported_occlusion_matched']} vs "
@@ -777,24 +896,25 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
 
     # Per-image table
     add("## Per-image results")
-    add("| sample | status | gt | pred | TP | FP | FN | IoU@0.5 | Δcount | tok |")
-    add("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+    add("| sample | status | gt | pred | TP | FP | FN | mask IoU@0.5 | box TP@0.5 | Δcount | tok |")
+    add("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for r in records:
         tok = r.get("total_tokens")
+        box_tp = (r.get("box_metrics") or {}).get("tp_50")
         add(f"| {r['sample_id']} | {r['status']} | {r.get('n_gt')} | "
             f"{r.get('n_pred')} | {r.get('tp_50')} | {r.get('fp_50')} | "
             f"{r.get('fn_50')} | {r.get('mean_matched_iou_50')} | "
-            f"{r.get('count_error')} | {tok} |")
+            f"{box_tp} | {r.get('count_error')} | {tok} |")
     add("")
 
     # Error analysis
-    parsed = [r for r in records if r["status"] in (parse.OK, parse.NO_PICK_POINT)]
+    scored = [r for r in records if r.get("tp_50") is not None]
     worst_miss = sorted(
-        (r for r in parsed if r.get("fn_gt_areas_50")),
+        (r for r in scored if r.get("fn_gt_areas_50")),
         key=lambda r: (sum(r["fn_gt_areas_50"]), len(r["fn_gt_areas_50"])),
         reverse=True)[:10]
     high_conf_fp = []
-    for r in parsed:
+    for r in scored:
         fp_indices = set(r.get("fp_pred_indices_50") or [])
         for i in fp_indices:
             inventory = r.get("inventory") or []
@@ -837,9 +957,10 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
 
     # Overlays
     add("## Overlays")
-    add("Per-run overlays in `overlays/` (white = GT box — a missed one carries "
-        "a red `MISS` label below it; green = prediction matched as TP, red = "
-        "unmatched prediction (FP); label text takes its box colour except the "
+    add("Per-run overlays in `overlays/` (white translucent fill = GT instance "
+        "mask — a missed one carries a red `MISS` label at its GT-box "
+        "position; green polygon = prediction matched as TP, red = unmatched "
+        "prediction (FP); label text takes its polygon colour except the "
         "`red xx%` segment, which is redness-coloured; small legend at the "
         "bottom-left); contact sheets in `contact_sheets/` (chunks of 24) and "
         "`contact_sheets/miss_gallery.jpg`. Overlays and sheets are JPG "
@@ -858,8 +979,11 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
     add("## Provenance")
     add(f"- run directory name encodes model/effort/CLI/harness: "
         f"`{run_dir.name}`")
-    add(f"- base-harness fingerprint covers the provider stack, prompt text, "
-        f"parser and control the numbers depend on: `{base['fingerprint']}`")
+    add(f"- base-harness fingerprint covers the provider stack, parser and "
+        f"control the numbers depend on: `{base['fingerprint']}`")
+    add(f"- this harness's fingerprint covers the seg subtree only "
+        f"(`strawdi_eval/seg/`): `{info['fingerprint']}` — the detection "
+        f"pipeline's glob does not see this directory and vice versa.")
     add(f"- manifest snapshot + catalog snapshot in this directory; "
         f"records in `responses.jsonl` carry the full identity per call.")
     (run_dir / "report.md").write_text("\n".join(lines) + "\n")
@@ -868,21 +992,55 @@ def write_report(run_dir: Path, args, manifest, control, records: list[dict],
 def write_artifacts(run_dir: Path, args, manifest, control, records: list[dict],
                     started: str, elapsed: float, run_summary: dict,
                     rebuilt_with: str | None = None) -> None:
-    # Re-derive the detection fields from the stored inventories so a rebuild
-    # after a scoring fix re-scores every old run (the records carry their GT).
+    samples = {s["sample_id"]: s for s in manifest["samples"]}
+
+    # Re-derive the scored fields from the stored inventories so a rebuild
+    # after a scoring fix re-scores every old run. The box cross-check is
+    # always offline-safe (GT boxes ride in the record); the mask block needs
+    # the label PNGs — without the mount a rebuild keeps the stored mask
+    # numbers rather than wiping them.
+    masks_by_sample: dict[str, list[np.ndarray]] = {}
     for record in records:
-        record.update(detection_block(record))
+        sample = samples.get(record["sample_id"], {})
+        try:
+            masks_by_sample[record["sample_id"]] = load_gt_masks(sample)
+        except Exception as exc:
+            record.setdefault("gt_mask_error", f"{type(exc).__name__}: {exc}")
+            record["gt_masks_loaded"] = False
+        if record["sample_id"] in masks_by_sample:
+            record["gt_masks_loaded"] = True
+            record.pop("gt_mask_error", None)
+            record.update(mask_block(record["status"], record.get("inventory"),
+                                     masks_by_sample[record["sample_id"]],
+                                     sample["gt_areas"], record["frame_w"],
+                                     record["frame_h"], sample["n_gt"]))
+        record["box_metrics"] = box_metrics_block(
+            record["status"], record.get("inventory"),
+            record.get("gt_boxes"), record.get("gt_areas"),
+            record["frame_w"], record["frame_h"])
     records.sort(key=lambda r: r["sample_id"])
 
+    # Mask AP needs rasterised predictions + GT masks; compute it only when
+    # EVERY parsed record re-derived against its masks (else it would be a
+    # number over a subset, silently).
+    parsed = [r for r in records
+              if r["status"] in (parse.OK, parse.NO_PICK_POINT)]
+    mask_ap = None
+    if parsed and all(r["sample_id"] in masks_by_sample for r in parsed):
+        mask_ap = seg_scoring.ap_metrics_masks([{
+            "sample_id": r["sample_id"],
+            "preds": seg_scoring.prepare_predictions_masks(
+                r.get("inventory"), r["frame_w"], r["frame_h"]),
+            "gt_masks": masks_by_sample[r["sample_id"]],
+        } for r in parsed])
+
     # Render BEFORE persisting: _render_all updates each record's overlay
-    # field (and clears render_error), and those updates must land in the
-    # written artefacts — a rebuild re-renders from scratch, so its overlay
-    # outcomes only exist after this step.
-    _render_all(run_dir, records)
+    # field, and those updates must land in the written artefacts.
+    _render_all(run_dir, records, masks_by_sample)
     (run_dir / "responses.jsonl").write_text(
         "".join(json.dumps(r) + "\n" for r in records))
-    summary = detection_summary(records)
-    write_detection_csvs(run_dir, records, summary)
+    summary = seg_summary(records, mask_ap)
+    write_seg_csvs(run_dir, records, summary)
     write_report(run_dir, args, manifest, control, records, summary, started,
                  elapsed, run_summary, rebuilt_with)
 
@@ -891,14 +1049,32 @@ def write_artifacts(run_dir: Path, args, manifest, control, records: list[dict],
 # Subcommands
 # ---------------------------------------------------------------------------
 
+def select_samples(args, manifest) -> list[dict]:
+    samples = manifest["samples"]
+    if args.sample_id:
+        samples = [s for s in samples if s["sample_id"] == args.sample_id]
+        if not samples:
+            raise SystemExit(f"no manifest sample with sample_id {args.sample_id!r}")
+    if args.limit:
+        samples = samples[: args.limit]
+    if not samples:
+        raise SystemExit("no samples selected")
+    return samples
+
+
 def dry_run(args, manifest, model) -> None:
-    samples = manifest["samples"][: args.limit] if args.limit else manifest["samples"]
+    samples = select_samples(args, manifest)
     print(f"dry run : {len(samples)} frame(s), 1 prompt ({STYLE_NAME}), "
           f"1 control call; provider={args.provider} model={model}")
     print(f"plan    : {len(samples) + 1} model call(s) if run for real")
     sample = samples[0]
     h, w = sample["image_shape_hw"]
-    print(f"first   : {sample['sample_id']} ({w}x{h}, {sample['n_gt']} GT)")
+    try:
+        load_gt_masks(sample)
+        gt = f"{sample['n_gt']} GT (label masks verified)"
+    except Exception as exc:
+        gt = f"{sample['n_gt']} GT (WARNING: label masks unavailable: {exc})"
+    print(f"first   : {sample['sample_id']} ({w}x{h}, {gt})")
     print("\n--- prompt (verbatim) " + "-" * 40)
     print(build_prompt(args, sample))
     print("--- end prompt " + "-" * 46)
@@ -960,9 +1136,7 @@ def main(argv: list[str] | None = None) -> None:
         effort = args.reasoning_effort
         catalog_info = vre.catalog_entry(args, model)
 
-    samples = manifest["samples"][: args.limit] if args.limit else manifest["samples"]
-    if not samples:
-        raise SystemExit("no samples selected")
+    samples = select_samples(args, manifest)
 
     if args.dry_run:
         dry_run(args, manifest, model)
@@ -1005,10 +1179,11 @@ def main(argv: list[str] | None = None) -> None:
     print(f"plan    : {len(samples)} frames x 1 prompt ({STYLE_NAME}) "
           f"= {len(samples)} calls + 1 control")
 
-    # The control image path must be resolved against THIS harness's directory
-    # (the base run_control defaults to its own).
+    # The control image path must be resolved against the STRAWDI directory
+    # (manifest paths are relative to it; the base run_control defaults to
+    # its own HERE).
     if not args.control_image:
-        args.control_image = HERE / manifest["control"]["image"]
+        args.control_image = STRAWDI / manifest["control"]["image"]
 
     control = None
     if args.skip_control:
@@ -1070,12 +1245,12 @@ def main(argv: list[str] | None = None) -> None:
 
     partial_path.unlink(missing_ok=True)
     shutil.rmtree(tmp, ignore_errors=True)
-    summary = detection_summary(records)
+    summary = seg_summary(records, None)
     print(f"\ndone in {elapsed:.0f}s -> {run_dir}")
     print(f"report  : {run_dir / 'report.md'}")
-    print(f"metrics : F1@0.5 {summary.get('f1_50')}  "
+    print(f"metrics : mask F1@0.5 {summary.get('f1_50')}  "
           f"P {summary.get('precision_50')}  R {summary.get('recall_50')}  "
-          f"AP@50 {summary.get('ap_50')}  mAP {summary.get('map_50_95')}")
+          f"| box cross-check F1@0.5 {summary.get('box_f1_50')}")
 
 
 def _progress(done: int, total: int, record: dict) -> None:
@@ -1083,7 +1258,7 @@ def _progress(done: int, total: int, record: dict) -> None:
     fp = record.get("fp_50")
     fn = record.get("fn_50")
     det = (f"TP{tp} FP{fp} FN{fn}" if tp is not None else "–")
-    print(f"[{done}/{total}] {record['run_id']:<40} {record['status']:<13} "
+    print(f"[{done}/{total}] {record['run_id']:<44} {record['status']:<13} "
           f"{det:<12} tok={record.get('total_tokens')}", flush=True)
 
 

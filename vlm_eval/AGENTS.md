@@ -491,6 +491,22 @@ How the invariants map on this path:
 (`wire_api=responses`), reading the key from `ZHIPU_API_KEY`. It needs a catalog
 entry for the GLM slug; without one it errors early. Treat it as unvalidated.
 
+### Antigravity via agy (validated on StrawDI, 2026-09-16)
+
+`--provider agy` runs Google's Antigravity CLI headless (`agy -p`,
+`--output-format stream-json`, default model `gemini-3.8-flash-high`). It breaks
+the usual invariant shape in one fundamental way, and every agy report carries
+the caveat: agy has **no headless image attachment** and **no API-level
+tool-off**. Delivery goes through the built-in `view_file` tool — the frame is
+staged as the only file of a per-call temp workspace (no `.agents` up-tree), the
+prompt names the exact path, and the model must call `view_file` once; the event
+stream is scanned and any other tool step or denied action fails the record.
+Measured: `view_file` shows the model the image **resampled to 800×600**, so
+prompts speak the 800×600 space (`prompt_frame_size`) and reported coordinates
+are scaled back (`agy_scale_point` / `agy_scale_box`) before control checks and
+scoring. The synthetic control gates that whole chain per run. Do not compare
+agy IoU numbers against codex/claude runs without quoting this handicap.
+
 ---
 
 ## 6. Troubleshooting

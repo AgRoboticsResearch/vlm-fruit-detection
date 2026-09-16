@@ -40,6 +40,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -101,6 +102,35 @@ TOOL_NOTICE = (
     "file access for this task, so do not attempt to read any file, and do not emit "
     "tool calls."
 )
+
+def control_prompt_for(args) -> str:
+    """The control prompt in the coordinate space the provider delivers.
+
+    codex/claude deliver the control image unchanged (640x480, and the prompt
+    says so).  agy's view_file resamples it to 800x600, so the prompt must
+    describe that frame instead; the no-tools notice is dropped there because
+    the agy delivery notice (appended inside ``call_model_agy``) replaces it.
+    """
+    if getattr(args, "provider", None) == "agy":
+        dw, dh = AGY_DELIVERED_W, AGY_DELIVERED_H
+        return (
+            f"This is a synthetic test image, {dw}x{dh} pixels, containing a "
+            "4-digit code and two coloured shapes on a plain white background.\n"
+            "\n"
+            "Report three things.\n"
+            "1. The 4-digit code, read digit by digit, as a string.\n"
+            "2. The centre of the red circle, as [u, v].\n"
+            "3. The centre of the green square, as [u, v].\n"
+            "\n"
+            "Coordinates use a top-left origin: x increases to the right "
+            f"(0..{dw - 1}), y increases downward (0..{dh - 1}), whole pixels.\n"
+            "\n"
+            "Reply with ONLY this JSON object and nothing else - no prose, no "
+            "code fences:\n"
+            '{"code": "0000", "red_circle": [u, v], "green_square": [u, v]}'
+        )
+    return f"{prompts.CONTROL_PROMPT}\n\n{TOOL_NOTICE}"
+
 
 # Heuristic: the CLI logs blocked tool attempts like
 #   ERROR codex_core::tools::router: error=unsupported call: exec
@@ -238,7 +268,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                     help="model slug; defaults to the user's configured model")
     ap.add_argument("--reasoning-effort", default=None,
                     help="model_reasoning_effort override; default keeps the user's setting")
-    ap.add_argument("--provider", choices=("codex", "glm", "claude"), default="codex")
+    ap.add_argument("--provider", choices=("codex", "glm", "claude", "agy"),
+                    default="codex")
+    ap.add_argument("--agy-model", default=None,
+                    help="model slug to use with --provider agy "
+                         "(default gemini-3.8-flash-high)")
     ap.add_argument("--glm-model", default=None,
                     help="model slug to use with --provider glm")
     ap.add_argument("--claude-model", default=None,
@@ -325,6 +359,249 @@ def provider_overrides(args) -> list[str]:
         "-c", 'model_providers.glm.wire_api="responses"',
         "-c", f'model_providers.glm.env_key="{key_env}"',
     ]
+
+
+# --- provider: agy (Antigravity CLI) ----------------------------------------
+#
+# Runs the model through Google's Antigravity CLI (``agy``) in headless print
+# mode.  The invariant mapping differs from codex/claude in ONE fundamental
+# way, and every record and report says so:
+#
+#   I1 images   agy has NO headless image-attachment mechanism: its
+#               ``--input-format stream-json`` accepts only text content
+#               blocks (verified on 1.2.3: image blocks are rejected with
+#               'content block type "image" is not supported'), and an
+#               ``@path`` mention is literal prompt text, not an attachment.
+#               The only pixel path is the built-in ``view_file`` tool: the
+#               frame is staged as the sole file of a per-call empty
+#               workspace under the system temp dir (so no repo ``.agents``
+#               customisations are discovered up-tree), the prompt names that
+#               exact absolute path, and the model must call ``view_file`` on
+#               it.  Measured behaviour (agy 1.2.3, gemini-3.8-flash-high,
+#               640x480 and 1008x756 inputs): view_file shows the model the
+#               image RESAMPLED to 800x600, so the prompt speaks the 800x600
+#               coordinate space and the harness scales reported coordinates
+#               back by (orig_w/800, orig_h/600) before checking or scoring.
+#               The synthetic control verifies this whole chain on every run.
+#   I3 tools    agy offers no API-level tool removal (no equivalent of
+#               ``claude --tools ""``).  Mitigation, in layers: the staged
+#               workspace contains ONLY the frame; the prompt forbids every
+#               other action; workspace-scoped reads are auto-approved by the
+#               CLI while anything else (run_command, writes, reads outside
+#               the workspace) is denied headlessly; and the event stream is
+#               scanned — every tool step that is not ``view_file`` on the
+#               staged frame, and every denied action, lands in
+#               ``tool_attempts`` and fails the record and the batch.  This is
+#               strictly weaker than the codex/claude delivery (the model IS
+#               handed one tool) and the reports carry that caveat verbatim.
+
+AGY_DEFAULT_MODEL = "gemini-3.8-flash-high"
+AGY_DELIVERED_W, AGY_DELIVERED_H = 800, 600
+AGY_VIEW_TOOL = "view_file"
+
+AGY_DELIVERY_NOTICE = (
+    "IMAGE DELIVERY: the image for this task is the file {path}. Use the "
+    "view_file tool to look at that exact file. That file is the ONLY thing "
+    "you may access: do not run commands, do not search the filesystem, do "
+    "not view any other file, do not write anything. The image you will see "
+    "is {dw}x{dh} pixels; every coordinate you report must be in that "
+    "{dw}x{dh} frame. After viewing the image, reply with the JSON answer."
+)
+
+
+def agy_delivered_size(orig_w: int, orig_h: int) -> tuple[int, int]:
+    """The size view_file actually shows the model (measured: always 800x600)."""
+    return AGY_DELIVERED_W, AGY_DELIVERED_H
+
+
+def prompt_frame_size(args, orig_w: int, orig_h: int) -> tuple[int, int]:
+    """The coordinate space the prompt must describe for this provider."""
+    if getattr(args, "provider", None) == "agy":
+        return agy_delivered_size(orig_w, orig_h)
+    return orig_w, orig_h
+
+
+def agy_scale_point(pt, orig_w: int, orig_h: int) -> list[float]:
+    """Map a point the model reported in the delivered frame back to the
+    original image's coordinate space."""
+    dw, dh = agy_delivered_size(orig_w, orig_h)
+    return [pt[0] * orig_w / dw, pt[1] * orig_h / dh]
+
+
+def agy_scale_box(box, orig_w: int, orig_h: int) -> list[int]:
+    """``agy_scale_point`` for a bbox, clamped to the original image bounds."""
+    dw, dh = agy_delivered_size(orig_w, orig_h)
+    sx, sy = orig_w / dw, orig_h / dh
+    x1 = min(max(int(round(box[0] * sx)), 0), orig_w)
+    y1 = min(max(int(round(box[1] * sy)), 0), orig_h)
+    x2 = min(max(int(round(box[2] * sx)), 0), orig_w)
+    y2 = min(max(int(round(box[3] * sy)), 0), orig_h)
+    return [x1, y1, x2, y2]
+
+
+def agy_version() -> str:
+    try:
+        version = subprocess.run(["agy", "--version"], capture_output=True, text=True,
+                                 timeout=30)
+        return (version.stdout.strip() or version.stderr.strip()) or "unknown"
+    except Exception:
+        return "unknown"
+
+
+def agy_catalog_info(args, model: str) -> dict:
+    """Provenance snapshot for the Antigravity provider.
+
+    No codex catalog and no base64 delivery on this path; what matters is the
+    CLI version, the model slug, and the measured view_file delivery contract
+    (staged workspace, 800x600 resample, coordinate rescale), because that —
+    not the prompt text — decides what the model actually sees.
+    """
+    return {
+        "provider": "agy",
+        "model_slug": model,
+        "delivery": ("agy -p headless; frame staged as the only file of a per-call "
+                     "temp workspace; model must call view_file on it (the single "
+                     "sanctioned tool); view_file shows the image resampled to "
+                     f"{AGY_DELIVERED_W}x{AGY_DELIVERED_H} (measured on agy "
+                     f"{agy_version()}); reported coordinates are scaled back to "
+                     "the original frame by the harness before scoring"),
+        "delivered_size": [AGY_DELIVERED_W, AGY_DELIVERED_H],
+        "input_modalities": ["image"],
+        "cli_version": agy_version(),
+        "note": "No API-level tool-off exists on this path (unlike codex/claude). "
+                "Any tool step other than view_file on the staged frame, and any "
+                "denied action, is recorded in tool_attempts and fails the run. "
+                "The synthetic control gates the whole delivery+rescale chain.",
+    }
+
+
+def build_agy_command(model: str, effort: str | None, prompt: str,
+                      timeout: float) -> list[str]:
+    # NB: ``-p`` swallows the next token as the prompt, so the prompt is glued
+    # to the flag; every other flag must come first.
+    print_timeout = max(60, int(timeout) - 30)
+    cmd = [
+        "agy",
+        "--output-format", "stream-json",
+        "--model", model,
+        "--disable-slash-commands",
+        "--print-timeout", f"{print_timeout}s",
+    ]
+    if effort:
+        cmd += ["--effort", effort]
+    cmd.append(f"-p={prompt}")
+    return cmd
+
+
+def parse_agy_events(stdout: str, staged_path: Path) -> dict:
+    """Pull the answer, usage and tool discipline out of agy's NDJSON stream."""
+    messages: list[str] = []
+    errors: list[str] = []
+    usage = None
+    last_message = ""
+    tool_attempts: set[str] = set()
+    view_file_calls = 0
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        etype = event.get("event")
+        if etype == "step_update":
+            step = event.get("step_update") or {}
+            stype = step.get("step_type")
+            if stype == "agent_response" and step.get("text_delta"):
+                messages.append(step["text_delta"])
+            elif stype == "tool" and step.get("state") == "ACTIVE":
+                name = str(step.get("tool_name") or "")
+                params = (step.get("tool_info") or {}).get("parameters") or {}
+                target = str(params.get("AbsolutePath") or "")
+                if name == AGY_VIEW_TOOL and target == str(staged_path):
+                    view_file_calls += 1
+                else:
+                    detail = f"{name}({target})" if target else name
+                    tool_attempts.add(detail or "<unknown-tool>")
+        elif etype == "result":
+            result = event.get("result") or {}
+            response = result.get("response")
+            if isinstance(response, str) and response.strip():
+                last_message = response
+            if result.get("status") not in (None, "SUCCESS"):
+                errors.append(f"agy status: {result.get('status')}")
+            for denied in (result.get("denied_actions") or []):
+                action = (denied or {}).get("action") or "unknown"
+                tool_attempts.add(f"denied:{action}")
+            raw_usage = result.get("usage")
+            if isinstance(raw_usage, dict):
+                usage = {
+                    "input_tokens": raw_usage.get("input_tokens"),
+                    "cached_input_tokens": raw_usage.get("cache_read_tokens") or 0,
+                    "output_tokens": raw_usage.get("output_tokens"),
+                    "reasoning_output_tokens": raw_usage.get("thinking_tokens") or 0,
+                }
+    if not last_message and messages:
+        last_message = "".join(messages)
+    return {"usage": usage, "last_message": last_message, "errors": errors,
+            "tool_attempts": sorted(tool_attempts),
+            "view_file_calls": view_file_calls}
+
+
+def call_model_agy(args, image: Path, prompt: str, model: str, effort: str | None,
+                   timeout: float, stem_hint: str) -> dict:
+    """One headless ``agy -p`` call with the frame staged for view_file.
+
+    The staged workspace is a fresh per-call temp dir containing ONLY the
+    frame: workspace-scoped reads are auto-approved by the CLI, so the one
+    sanctioned ``view_file`` succeeds without a grant, while anything else
+    the model tries is denied (and recorded as a tool attempt).
+    """
+    safe_stem = re.sub(r"[^A-Za-z0-9_.-]+", "_", stem_hint)[:80]
+    workspace = Path(tempfile.mkdtemp(prefix=f"strawdi_agy_{safe_stem}_"))
+    staged = workspace / image.name
+    shutil.copyfile(image, staged)
+    full_prompt = (f"{prompt}\n\n"
+                   + AGY_DELIVERY_NOTICE.format(
+                       path=staged, dw=AGY_DELIVERED_W, dh=AGY_DELIVERED_H))
+    cmd = build_agy_command(model, effort, full_prompt, timeout)
+    started = time.perf_counter()
+    try:
+        proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True,
+                              text=True, timeout=timeout, cwd=str(workspace))
+        returncode, stdout, stderr = proc.returncode, proc.stdout, proc.stderr
+        timed_out = False
+    except subprocess.TimeoutExpired as exc:
+        returncode = None
+        stdout = exc.stdout.decode() if isinstance(exc.stdout, bytes) else (exc.stdout or "")
+        stderr = exc.stderr.decode() if isinstance(exc.stderr, bytes) else (exc.stderr or "")
+        timed_out = True
+    wall = time.perf_counter() - started
+
+    parsed = parse_agy_events(stdout, staged)
+    if returncode not in (0, None) and stderr.strip():
+        parsed["errors"].append(stderr.strip()[:400])
+    shutil.rmtree(workspace, ignore_errors=True)
+    # The prompt already rides in the record; keep the logged command lean.
+    logged_cmd = [c if not c.startswith("-p=") else "-p=<prompt: see record.prompt>"
+                  for c in cmd]
+    return {
+        "command": logged_cmd,
+        "returncode": returncode,
+        "timed_out": timed_out,
+        "wall_s": round(wall, 3),
+        "stdout": stdout,
+        "stderr": stderr,
+        "usage": parsed["usage"],
+        "events": [],
+        "errors": parsed["errors"],
+        "tool_attempts": parsed["tool_attempts"],
+        "view_file_calls": parsed["view_file_calls"],
+        "last_message": parsed["last_message"],
+        "structured_output": None,
+        "api_cost_usd": None,
+    }
 
 
 # --- provider: claude -------------------------------------------------------
@@ -539,6 +816,8 @@ def claude_version() -> str:
 def cli_identity(provider: str) -> dict:
     if provider == "claude":
         return {"cli_name": "claude", "cli_version": claude_version()}
+    if provider == "agy":
+        return {"cli_name": "agy", "cli_version": agy_version()}
     return {"cli_name": "codex", "cli_version": codex_version()}
 
 
@@ -572,6 +851,9 @@ def call_model(args, manifest, image: Path, prompt: str, out_message: Path,
     if args.provider == "claude":
         return call_model_claude(args, image, prompt, schema, model, effort,
                                  working_dir, timeout)
+    if args.provider == "agy":
+        return call_model_agy(args, image, prompt, model, effort, timeout,
+                              stem_hint=out_message.stem)
     cmd = build_command(args, manifest, image, prompt, out_message, schema, model,
                         effort, working_dir)
     started = time.perf_counter()
@@ -1150,7 +1432,7 @@ def run_control(args, manifest, run_ctx) -> dict:
     truth = manifest["control"]["truth"]
     message_path = run_ctx["tmp"] / "control.last.txt"
     attempt = call_model(args, manifest, control_path,
-                         f"{prompts.CONTROL_PROMPT}\n\n{TOOL_NOTICE}",
+                         control_prompt_for(args),
                          message_path, CONTROL_SCHEMA_PATH,
                          run_ctx["model"], run_ctx["effort"], run_ctx["agent_cwd"],
                          args.timeout)
@@ -1164,6 +1446,15 @@ def run_control(args, manifest, run_ctx) -> dict:
         code_ok = str(obj["code"]).strip() == truth["code"]
         pred_circle = parse.normalise_point(obj["red_circle"])
         pred_square = parse.normalise_point(obj["green_square"])
+        if args.provider == "agy":
+            # The model answered in the delivered 800x600 frame; scale back to
+            # the control image's own coordinate space before comparing.
+            from PIL import Image as _PILImage
+            cw, ch = _PILImage.open(control_path).size
+            if pred_circle:
+                pred_circle = agy_scale_point(pred_circle, cw, ch)
+            if pred_square:
+                pred_square = agy_scale_point(pred_square, cw, ch)
         if pred_circle:
             circle_err = float(np.hypot(pred_circle[0] - truth["red_circle"][0],
                                         pred_circle[1] - truth["red_circle"][1]))
@@ -1769,6 +2060,17 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
             "`--no-session-persistence`, inside the empty `vlm_eval/agent_cwd/` "
             "directory. The event stream is scanned for tool calls and permission "
             "denials; any attempt fails acceptance.")
+    elif provider == "agy":
+        add("- Every model call runs `agy -p` headless with the frame staged as "
+            "the ONLY file of a fresh per-call temp workspace (no `.agents` "
+            "customisations up-tree), and the prompt directs the model to view "
+            "exactly that file. agy has no API-level tool-off (unlike "
+            "codex/claude): the model IS handed its normal tool list, so "
+            "discipline is enforced by the workspace (anything but a "
+            "workspace-scoped read is denied headlessly) and verified by the "
+            "event-stream scan — every tool step that is not `view_file` on the "
+            "staged frame, and every denied action, is recorded in "
+            "`tool_attempts` and fails the record and the batch.")
     else:
         add(f"- Every model call runs with all tool surfaces disabled "
             f"(`{'`, `'.join(DISABLED_FEATURES)}`) and `--sandbox read-only`, so the model "
@@ -1783,6 +2085,18 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
                 f"{catalog.get('cli_version', 'unknown')}). No codex catalog override "
                 f"applies on this path; delivery is decided server-side by the slug, "
                 f"and the synthetic control that opens this report is the gate.")
+        elif provider == "agy":
+            add(f"- Image delivery: agy has no headless image attachment "
+                f"(stream-json input is text-only; `@path` mentions are literal "
+                f"text), so the frame reaches the model through the built-in "
+                f"`view_file` tool on the staged copy — the one sanctioned tool "
+                f"call. Measured on agy {catalog.get('cli_version', 'unknown')}: "
+                f"view_file shows the model the image RESAMPLED to "
+                f"{AGY_DELIVERED_W}x{AGY_DELIVERED_H}, so the prompt speaks the "
+                f"{AGY_DELIVERED_W}x{AGY_DELIVERED_H} coordinate space and the "
+                f"harness scales reported coordinates back to the original frame "
+                f"before checking or scoring. The synthetic control gates this "
+                f"whole chain on every run.")
         else:
             add(f"- Image delivery: `codex exec` was given "
                 f"`-c model_catalog_json={catalog['path']}` "
@@ -1793,7 +2107,8 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
                 f"override is what makes the model see the frame at all.")
     else:
         add("- Image delivery: catalog provenance not recorded for this run.")
-    cli_name = run_summary.get("cli_name") or ("claude" if provider == "claude" else "codex")
+    cli_name = run_summary.get("cli_name") or \
+        {"claude": "claude", "agy": "agy"}.get(provider, "codex")
     add(f"- Environment: python {platform.python_version()}, {cli_name} CLI "
         f"`{run_summary.get('cli_version', 'unknown')}`.")
     add(f"- Raw responses, per-run records and usage: `responses.jsonl`; flat table: "
@@ -2066,7 +2381,13 @@ def main(argv: list[str] | None = None) -> None:
     manifest = json.loads(args.manifest.read_text())
 
     cfg = read_user_config()
-    if args.provider == "claude":
+    if args.provider == "agy":
+        # The Antigravity path has no codex config or catalog; the slug carries
+        # the reasoning effort (gemini-3.8-flash-high/-medium/-low).
+        model = args.agy_model or args.model or AGY_DEFAULT_MODEL
+        effort = args.reasoning_effort
+        catalog_info = agy_catalog_info(args, model)
+    elif args.provider == "claude":
         # The claude-code path has no codex config or catalog.  Deliberately NOT
         # defaulted from ANTHROPIC_MODEL: that env names this installation's agent
         # model (here the text-only glm-5.3 flagship, which cannot receive images);
@@ -2102,7 +2423,7 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-    cli_name = "claude" if args.provider == "claude" else "codex"
+    cli_name = {"claude": "claude", "agy": "agy"}.get(args.provider, "codex")
     run_dir = args.out / run_directory_name(stamp, model, effort, args.tag, cli=cli_name)
     run_dir.mkdir(parents=True, exist_ok=False)
     tmp = run_dir / ".tmp"

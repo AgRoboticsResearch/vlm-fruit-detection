@@ -1,12 +1,12 @@
 {
   "schema_version": "strawdi_eval/1",
-  "generated_at": "2026-09-15T06:32:52+00:00",
+  "generated_at": "2026-09-15T15:16:04+00:00",
   "generator": {
     "script": "build_manifest.py",
     "argv": [],
     "sha256": "f793b822f95e1bce33a384229305db2bb928d1b787fd6bd4d9f7a38e5d6ddaaa"
   },
-  "python": "3.12.3",
+  "python": "3.12.7",
   "dataset": {
     "name": "StrawDI_Db1",
     "url": "https://strawdi.github.io/",
