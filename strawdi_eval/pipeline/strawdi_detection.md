@@ -44,17 +44,19 @@ What is scored and what is not:
 
 ## 2. Input / output contract
 
-**Input:** one RGB frame from StrawDI_Db1 `val` (1008×756, real field
-photographs). 1008 < 1280, so frames are delivered **unchanged** — byte-for-byte
-copies snapshotted into `data/frames/` — and ground-truth coordinates map 1:1
-onto the delivered image with no resampling. The builder hard-errors on any
-frame over the 1280 px ceiling rather than silently resizing.
+**Input:** one RGB frame from StrawDI_Db1 `test` (200 frames, 1008×756, real
+field photographs; the manifest ran `val` until 2026-09-16, then switched
+splits — see the §6 note). 1008 < 1280, so frames are delivered **unchanged** —
+byte-for-byte copies snapshotted into `data/frames/` — and ground-truth
+coordinates map 1:1 onto the delivered image with no resampling. The builder
+hard-errors on any frame over the 1280 px ceiling rather than silently resizing.
 
 **Ground truth:** the dataset ships per-instance segmentation masks (grayscale
 PNG, 0 = background, 1..N = instance). One tight, axis-aligned, **half-open**
 box `[x1, y1, x2, y2]` is derived per instance (`x2 = mask_xmax + 1`,
-`y2 = mask_ymax + 1`), **every** instance kept however small (smallest in val:
-59 px ≈ 8×8; 572 instances over 100 frames, mean 5.72/image). Ground truth is
+`y2 = mask_ymax + 1`), **every** instance kept however small (smallest in test:
+26 px ≈ 5×5; 1132 instances over 200 frames, mean 5.66/image, range 1–20 per
+frame). Ground truth is
 always *re-derived from the masks* — the verifier re-runs the same function and
 fails on any drift; nothing is ever hand-edited.
 
@@ -120,7 +122,7 @@ by quietly loosening the metric.
 python3 strawdi_eval/build_manifest.py                      # masks -> GT + frames
 python3 strawdi_eval/run_detection_eval.py --dry-run        # plan + prompt, 0 calls
 python3 strawdi_eval/run_detection_eval.py --limit 1 --tag smoke
-python3 strawdi_eval/run_detection_eval.py --jobs 3 --tag full   # 1 control + 100 calls
+python3 strawdi_eval/run_detection_eval.py --jobs 3 --tag full   # 1 control + 200 calls
 
 # acceptance gate — must print PASS:
 python3 strawdi_eval/verify_strawdi_run.py strawdi_eval/runs/<run dir>
@@ -187,6 +189,11 @@ saved as JPG (quality 90, 4:4:4) since 2026-09-15; model inputs, label masks
 and the synthetic control stay PNG.
 
 ## 6. Reference points (examples, not the contract)
+
+All rows below ran on the **`val`** split (100 frames) before the manifest
+switched to `test` on 2026-09-16 — they are development/iteration history, not
+comparable to future test-split numbers. Every run dir snapshots its own
+manifest, so each row stays reproducible from its run directory.
 
 | date | model (cli) | calls | control | F1@0.5 (P / R) | mAP@[.50:.95] | notes |
 | --- | --- | --- | --- | --- | --- | --- |

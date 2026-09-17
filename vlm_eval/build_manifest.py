@@ -13,7 +13,7 @@ input - it would hand the model the answer - and is used only for sanity checks.
 
 Usage:
     python3 vlm_eval/build_manifest.py
-    python3 vlm_eval/build_manifest.py --validation-k 8 --occluded-k 2
+    python3 vlm_eval/build_manifest.py --with-sroi        # experiments only
 """
 
 from __future__ import annotations
@@ -68,11 +68,18 @@ def parse_args() -> argparse.Namespace:
     ap.add_argument("--shunba-max-edge", type=int, default=DEFAULT_SHUNBA_MAX_EDGE,
                     help="max edge to normalise unlabelled images to; must stay at or "
                          "below the CLI's no-resize ceiling (verified safe: 1280)")
-    ap.add_argument("--skip-sroi", action="store_true",
-                    help="omit the ground-truthed SROI sources (validation, occluded) "
-                         "from the manifest entirely, so those frames are not even "
-                         "copied or ground-truthed. They are still built by default; "
-                         "the run step ignores them unless --sources asks for them.")
+    sroi = ap.add_mutually_exclusive_group()
+    sroi.add_argument("--with-sroi", action="store_true",
+                      help="include the ground-truthed SROI sources (validation, "
+                           "occluded) in the manifest. Since 2026-09-17 the "
+                           "full_detection pipeline is shunba-only: the default build "
+                           "omits the SROI frames entirely (not copied, not "
+                           "ground-truthed, no exemplar), so pass this only for an "
+                           "explicitly ground-truthed experiment build.")
+    sroi.add_argument("--skip-sroi", action="store_true",
+                      help="(the default since 2026-09-17) omit the SROI sources; "
+                           "accepted for compatibility with the pre-scope-change "
+                           "invocation, where it is now a no-op")
     ap.add_argument("--seed", type=int, default=20260714,
                     help="recorded for provenance; selection itself is deterministic spacing")
     ap.add_argument("--target-ref-root", type=Path, default=gtbridge.DEFAULT_TARGET_REF_ROOT)
@@ -213,14 +220,15 @@ def main() -> None:
     target_ref = gtbridge.load_target_ref(args.target_ref_root)
     tip_kin = target_ref.load_tip_kin(target_ref.DEFAULT_EXTRINSICS_CONFIG)
 
-    # The SROI wrist-camera sources hold the only ground truth, so they are what
-    # turns the scored metrics on. They are still built by default (the run step
-    # simply does not select them unless asked); --skip-sroi drops them entirely
-    # so those frames are not even copied or ground-truthed.
-    sources = [] if args.skip_sroi else [
+    # The SROI wrist-camera sources hold the only ground truth this dataset has,
+    # but since 2026-09-17 the full_detection pipeline is shunba-only: the
+    # default build omits them entirely (frames not copied, GT not computed, no
+    # few-shot exemplar). --with-sroi builds them back in for explicitly
+    # ground-truthed experiment runs.
+    sources = [
         ("validation", args.validation_root, args.validation_k, "val"),
         ("occluded", args.occluded_root, args.occluded_k, "occ"),
-    ]
+    ] if args.with_sroi else []
 
     samples: list[dict] = []
     selection: dict[str, dict] = {}
@@ -292,7 +300,7 @@ def main() -> None:
     # on, which is expected rather than an error.
     exemplar_row = None
     exemplar_annotated = exemplar_uv = None
-    if not args.skip_sroi:
+    if args.with_sroi:
         chosen_dirs = {s["episode_dir"] for s in samples if s.get("episode_dir")}
         exemplar_row = next(
             (r for r in all_gt_valid_by_source["validation"]

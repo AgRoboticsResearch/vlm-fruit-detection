@@ -5,13 +5,13 @@ Measures how well the model that Codex itself runs on (currently
 wrist-camera frame — from the pixels alone, with **no detector, tracker,
 segmenter or other model anywhere in the loop**.
 
-> **Current scope: shunba only.** The unlabelled multi-strawberry frames from
-> `shunba_sb_data` are the only source evaluated at the moment. The SROI
-> wrist-camera sources (`validation`, `occluded`) are still built and fully
-> supported, but are not run unless you ask
-> (`--sources validation occluded shunba`). Because shunba has no ground truth,
-> the default batch is **entirely qualitative** — no error, PCK, IoU or
-> sensitivity numbers — and the report says so rather than showing empty tables.
+> **Pipeline scope: shunba only (since 2026-09-17).** The unlabelled
+> multi-strawberry frames from `shunba_sb_data` are the pipeline's only source:
+> the manifest build omits the SROI wrist-camera sources (`validation`,
+> `occluded`) entirely — they are not part of the pipeline, only of explicit
+> `--with-sroi` experiment builds. Because shunba has no ground truth, every
+> batch is **entirely qualitative** — no error, PCK, IoU or sensitivity
+> numbers — and the report says so rather than showing empty tables.
 
 > **Agents: read [`AGENTS.md`](AGENTS.md) instead of this file.** It is the
 > binding operational runbook (invariants, exact workflow, troubleshooting).

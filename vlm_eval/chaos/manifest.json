@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-09-17T12:51:45+00:00",
+  "generator": "vlm_eval/chaos/build_chaos_manifest.py",
+  "python": "3.12.7",
+  "repo": "/mnt/data0/code/sroi/strawberry_detection",
+  "harness_dir": "/mnt/data0/code/sroi/strawberry_detection/vlm_eval/chaos",
+  "pipeline": "chaos_strawberry_detection",
+  "purpose": "detection + visible-surface segmentation on curated CHAOTIC strawberry scenes; no ground truth exists on any chaos scene, so every result is qualitative + internal-consistency diagnostics",
+  "delivery_rule": "model inputs fit inside 1280x720 preserving aspect (the '720P' rule); model inputs stay PNG",
+  "control": {
+    "image": "data/control/control_6305.png",
+    "truth": {
+      "code": "6305",
+      "red_circle": [
+        520,
+        80
+      ],
+      "green_square": [
+        200,
+        400
+      ]
+    },
+    "purpose": "proves the CLI actually delivered an image to the model before any result is reported"
+  },
+  "samples": [
+    {
+      "sample_id": "sb04",
+      "source": "chaos",
+      "has_gt": false,
+      "task": "full_inventory",
+      "session": "chaos",
+      "episode": "sb04",
+      "scene_note": "shunba scene 0000093.jpg, already normalised to 1280x720 (= 720p) by the base pipeline's manifest builder; the densest shunba frame (19 reported fruits in the 2026-09-16 vlm_seg run)",
+      "source_image": "/mnt/data0/code/sroi/strawberry_detection/vlm_eval/data/frames/sb04.png",
+      "source_sha256": "e23be02d7358be203a86e8cce1200ede6922efa548401b2e925a99774ea29e1e",
+      "image": "data/frames/chaos__sb04.png",
+      "delivered_sha256": "e23be02d7358be203a86e8cce1200ede6922efa548401b2e925a99774ea29e1e",
+      "image_shape_hw": [
+        720,
+        1280
+      ],
+      "source_image_shape_hw": [
+        720,
+        1280
+      ],
+      "stored_image_shape_hw": [
+        720,
+        1280
+      ],
+      "exif_orientation": null,
+      "downscaled": false,
+      "normalisation": "none (delivered unchanged)",
+      "gt_status": "none",
+      "gt_uv": null,
+      "gt_uv_rounded": null,
+      "gt_z_m": null,
+      "gt_rough_box": null,
+      "label_provenance": "none: curated chaos scene, no demonstrations, no trajectory and no ground-truth point or mask. Reported qualitatively only; excluded from every scored metric.",
+      "images": {
+        "raw": "data/frames/chaos__sb04.png"
+      }
+    },
+    {
+      "sample_id": "IMG_7665",
+      "source": "chaos",
+      "has_gt": false,
+      "task": "full_inventory",
+      "session": "chaos",
+      "episode": "IMG_7665",
+      "scene_note": "hand-held photo, stored 4032x3024 with EXIF orientation 6 (portrait 3024x4032 once transposed); fitted inside 1280x720 preserving aspect -> 540x720 for this pipeline",
+      "source_image": "/mnt/data0/code/sroi/strawberry_detection/vlm_eval/data/frames/IMG_7665.jpeg",
+      "source_sha256": "2a92fa3a17f50c665f919931ad3c488e1a80a18724888a3a15794dd541f3fc4d",
+      "image": "data/frames/chaos__IMG_7665.png",
+      "delivered_sha256": "46ab7b8f2b40ed1c50a443674f5177d1eb947681fd43a684a955d7ac98ef1431",
+      "image_shape_hw": [
+        720,
+        540
+      ],
+      "source_image_shape_hw": [
+        4032,
+        3024
+      ],
+      "stored_image_shape_hw": [
+        3024,
+        4032
+      ],
+      "exif_orientation": 6,
+      "downscaled": true,
+      "normalisation": "fitted inside 1280x720 preserving aspect, LANCZOS; EXIF orientation 6 applied first (upright)",
+      "gt_status": "none",
+      "gt_uv": null,
+      "gt_uv_rounded": null,
+      "gt_z_m": null,
+      "gt_rough_box": null,
+      "label_provenance": "none: curated chaos scene, no demonstrations, no trajectory and no ground-truth point or mask. Reported qualitatively only; excluded from every scored metric.",
+      "images": {
+        "raw": "data/frames/chaos__IMG_7665.png"
+      }
+    }
+  ]
+}

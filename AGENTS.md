@@ -21,6 +21,58 @@ python3 vlm_eval/run_vlm_eval.py --jobs 3 --tag full     # needs escalation + ne
 python3 vlm_eval/verify_run.py vlm_eval/runs/<timestamp>-full   # must print PASS
 ```
 
+## VLM segmentation eval (`vlm_eval/seg/`)
+
+A second pipeline on the same scenes: the full_detection output standard
+(nine per-fruit fields incl. `picking_point` + `target_index`) plus a tenth,
+`polygon` — a vertex outline of each fruit's VISIBLE surface. **No vlm_eval
+source has mask ground truth**, so the polygons are qualitative +
+internal-consistency diagnostics here (rendered, validity counts, extent vs
+own bbox, pick-point vs own outline); on SROI GT frames (explicit
+`--with-sroi` experiment manifests only — the base pipeline is shunba-only)
+the nominated target is scored exactly like full_detection, plus
+polygon-extent IoU vs the rough box. The verifier **fails** any run
+carrying mask-matching
+numbers — they cannot be measured on this data. Scored segmentation lives
+in `strawdi_eval/seg/`. Spec:
+[`vlm_eval/pipeline/full_segmentation.md`](vlm_eval/pipeline/full_segmentation.md);
+lives in `vlm_eval/seg/`, outside the base harness's fingerprint glob, same
+invariants, same provider defaults (`--provider claude` → glm-5.3-flash).
+
+```bash
+python3 vlm_eval/seg/run_segmentation_eval.py --limit 1 --tag smoke   # escalation + network
+python3 vlm_eval/seg/run_segmentation_eval.py --jobs 3 --tag full     # default scope: shunba, qualitative
+# scored cross-check needs an SROI experiment manifest (see the spec):
+#   python3 vlm_eval/build_manifest.py --with-sroi --out vlm_eval/manifest_sroi.json
+#   python3 vlm_eval/seg/run_segmentation_eval.py --manifest vlm_eval/manifest_sroi.json \
+#       --sources validation occluded shunba --jobs 3 --tag scored
+python3 vlm_eval/seg/verify_vlm_seg_run.py vlm_eval/seg/runs/<dir>    # must print PASS
+python3 vlm_eval/seg/test_seg_scoring.py                              # scorer self-checks
+```
+
+## Chaos strawberry detection (`vlm_eval/chaos/`)
+
+A fourth pipeline: the **StrawDI segmentation standard** — the
+`strawdi_segmentation` nine-field census (bbox = detection, polygon =
+visible-surface seg; no picking point, no nomination; prompt + schema are
+frozen byte-identical copies of the StrawDI ones) — run on a **curated list
+of chaotic scenes** (dense fruit, heavy clutter — currently shunba `sb04` +
+the `IMG_7665` hand-held photo, EXIF-uprighted and resized to fit 1280×720).
+**No ground truth exists on any chaos scene** — purely qualitative:
+overlays, per-fruit inventory and answer-internal diagnostics. **No
+verifier step** — the pipeline is a fast iteration loop by design.
+Imports the
+base provider stack and the vlm_seg polygon scorer unchanged; every record
+carries the three-fingerprint provenance chain (vlm_eval → vlm_seg →
+vlm_chaos). Spec:
+[`vlm_eval/pipeline/chaos_strawberry_detection.md`](vlm_eval/pipeline/chaos_strawberry_detection.md).
+
+```bash
+python3 vlm_eval/chaos/build_chaos_manifest.py                        # curate + 720p-normalise frames
+python3 vlm_eval/chaos/run_chaos_eval.py --tag full                   # scenes + 1 control (escalation + network)
+# no acceptance gate for this pipeline — deliberate (2026-09-17); see the spec's §3
+```
+
 ## StrawDI detection eval (`strawdi_eval/`)
 
 The second VLM pipeline: the unbiased inventory output standard narrowed to

@@ -15,24 +15,28 @@ between a valid measurement and a plausible-looking invalid one.
 
 ## 0. Before you start
 
-### Current evaluation scope: shunba only
+### Pipeline scope: shunba only (since 2026-09-17)
 
-**Only the unlabelled `shunba` multi-strawberry frames are evaluated.** The SROI
-sources (`validation`, `occluded`) are out of scope for now and are not run by
-default — `DEFAULT_SOURCES` in `run_vlm_eval.py` is `("shunba",)`.
+**The pipeline evaluates only the unlabelled `shunba` multi-strawberry frames.**
+The SROI sources (`validation`, `occluded`) are not part of the pipeline at all:
+the default manifest build (`python3 vlm_eval/build_manifest.py`) omits them
+entirely — no frames copied, no ground truth computed, no few-shot exemplar —
+and `DEFAULT_SOURCES` in `run_vlm_eval.py` is `("shunba",)`.
 
 Two consequences to keep in mind:
 
-* **The default batch is entirely qualitative.** The shunba frames have no ground
+* **Every batch is entirely qualitative.** The shunba frames have no ground
   truth, so there is no error, PCK, IoU or sensitivity number to compute. The
   report says so explicitly in its `## Scored metrics` section rather than showing
   empty tables, and the verdict calls the results qualitative.
-* **Scored metrics need the SROI frames back.** They are the only source with a
-  known picking point. Restore them with
-  `--sources validation occluded shunba` (the manifest still builds them, and the
-  `single_example` / `single_grid` / `single_strict` / `single_reasoned`
-  prompts only have frames to run on when it does). To stop touching that data
-  entirely, build with `python3 vlm_eval/build_manifest.py --skip-sroi`.
+* **Scored metrics are an explicit experiment, not part of the pipeline.** The
+  SROI frames are the only source with a known picking point. To run one:
+  `python3 vlm_eval/build_manifest.py --with-sroi` (ideally to a separate
+  `--out`, passed on as `--manifest`), then
+  `run_vlm_eval.py --sources validation occluded shunba` — this is also the
+  only build where the archived `single_example` / `single_grid` /
+  `single_strict` / `single_reasoned` prompts have frames to run on. Rebuild
+  the shunba-only manifest afterwards to restore the pipeline default.
 
 Do not "fix" the empty scored sections by inventing ground truth for shunba.
 
@@ -59,8 +63,8 @@ the relevant CLI flag rather than editing code:
 | --- | --- | --- |
 | upstream ground-truth module | `/mnt/data0/code/sroi/sroi_rosbag_utilities/target_ref.py` | `build_manifest.py --target-ref-root` |
 | camera↔gripper extrinsics | `/mnt/data0/code/sroi/sroi_rosbag_utilities/configs/camera_gripper_extrinsics_sroi_v2_d405.json` | resolved by `target_ref` |
-| validation frames | `/mnt/data1/sroi/sroi_v2/sroiv2_strawberry_picking_lab/validation_pngs/validation_20260714_160922-png` | `--validation-root` |
-| occluded frames | `/mnt/data1/sroi/sroi_v2/sroiv2_strawberry_picking_lab/20260803-occluded-cases-pngs` | `--occluded-root` |
+| validation frames | `/mnt/data1/sroi/sroi_v2/sroiv2_strawberry_picking_lab/validation_pngs/validation_20260714_160922-png` | `--validation-root` (only `--with-sroi` experiment builds) |
+| occluded frames | `/mnt/data1/sroi/sroi_v2/sroiv2_strawberry_picking_lab/20260803-occluded-cases-pngs` | `--occluded-root` (only `--with-sroi` experiment builds) |
 | sensitivity sweep | `/mnt/data1/projects/target_condition_sb_picking/viz/target_move/target_move_ep0_frame20.json` | `--sensitivity` |
 | unlabelled multi-strawberry scenes | `/mnt/data1/strawberry_robot/shunba_sb_data/images` (no GT) | `--shunba-root`, `--shunba-k` |
 | user model catalog | `$CODEX_HOME/cc-switch-model-catalog.json` (default `~/.codex/`) | `make_catalog.py --source` |
@@ -238,13 +242,16 @@ python3 vlm_eval/run_vlm_eval.py --dry-run
 # 4. Cheap smoke test (1 control + 1 call) before spending the batch
 python3 vlm_eval/run_vlm_eval.py --limit 1 --styles inventory_plain --tag smoke
 
-# 5. The batch. Only inventory_plain is active, so the default scope is
+# 5. The batch. Only inventory_plain is active, and the pipeline scope is
 #    shunba only -> 10 frames x 1 prompt = 10 calls, all qualitative.
 python3 vlm_eval/run_vlm_eval.py --jobs 3 --tag full
 
-#    ...to restore the ground-truthed SROI frames and the scored metrics
-#    (the nominated target of the inventory is scored against ground truth):
-python3 vlm_eval/run_vlm_eval.py --sources validation occluded shunba --jobs 3
+#    ...for a scored EXPERIMENT build only (outside the pipeline): build an
+#    SROI-inclusive manifest first, then select its sources (the nominated
+#    target of the inventory is scored against ground truth):
+python3 vlm_eval/build_manifest.py --with-sroi --out vlm_eval/manifest_sroi.json
+python3 vlm_eval/run_vlm_eval.py --manifest vlm_eval/manifest_sroi.json \
+    --sources validation occluded shunba --jobs 3
 
 #    ...or select exactly the prompts you want, by name or title (this is also
 #    how you run an archived prompt):
@@ -315,15 +322,15 @@ something to be quietly averaged in as a zero.
 
 ### Expected cost and shape
 
-**Default scope (shunba only, `inventory_plain` only): ~10 model calls** —
+**Pipeline scope (shunba only, `inventory_plain` only): ~10 model calls** —
 measured on glm-5.3-flash: ~3k input + 5–10k output tokens per call, ~4 min at
 `--jobs 3`, ≈$0.05–0.15 total. The inventory prompt is the expensive one because
-it describes every fruit in the scene.
-
-With the SROI frames restored (`--sources validation occluded shunba`) it is ~15
-calls (10 qualitative + 5 whose nominated target is scored). The control adds one
+it describes every fruit in the scene. The control adds one
 call. Reasoning effort follows the provider's configured default unless
 `--reasoning-effort` is passed.
+
+A scored SROI experiment build (see §0) is ~15 calls (10 qualitative + 5 whose
+nominated target is scored) and needs its own `--with-sroi` manifest.
 
 ### What a good run looks like
 
@@ -407,8 +414,8 @@ parsed JSON, usage, prompt, statuses), `metrics.csv` (flat table),
 ### Change the eval set size
 
 ```bash
-python3 vlm_eval/build_manifest.py --validation-k 8 --occluded-k 2
 python3 vlm_eval/build_manifest.py --shunba-k 20 --shunba-max-edge 1280
+python3 vlm_eval/build_manifest.py --with-sroi --validation-k 8 --occluded-k 2   # experiment builds
 ```
 
 Selection is deterministic: GT-valid episodes in sorted order, evenly spaced,
@@ -454,7 +461,9 @@ mode instead of `codex exec` — same manifest, prompts, control and acceptance
 gate:
 
 ```bash
-python3 vlm_eval/run_vlm_eval.py --provider claude --sources validation occluded shunba --jobs 3 --tag full
+python3 vlm_eval/run_vlm_eval.py --provider claude --jobs 3 --tag full
+# (the 2026-09-14 validation run below predates the shunba-only scope and used
+#  an SROI-inclusive manifest with --sources validation occluded shunba)
 ```
 
 How the invariants map on this path:
@@ -551,6 +560,10 @@ Do not add these back without an explicit request:
 | `AGENTS.md` (this file) | agent runbook; `CLAUDE.md` is a symlink to it |
 | `README.md` | human-facing what/why, findings, caveats |
 | `pipeline/full_detection.md` | standalone model-agnostic spec of the active pipeline (full-scene inventory + pick nomination); first of a per-pipeline doc series |
+| `pipeline/full_segmentation.md` | spec of the segmentation sibling (same standard + a `polygon` field; qualitative/diagnostics only — no mask GT on these scenes) |
+| `pipeline/chaos_strawberry_detection.md` | spec of the chaos sibling (the same standard on curated chaotic scenes; qualitative only) |
+| `seg/` | the segmentation sibling's harness (runner, verifier, tests), outside this harness's fingerprint glob; imports the machinery above unchanged |
+| `chaos/` | the chaos sibling's harness (curated-frame manifest builder, runner, frozen StrawDI prompt/schema copies; `verify_chaos_run.py` optional — NOT a workflow step); imports this harness and `seg/`'s scorer unchanged, records the three-fingerprint chain |
 | `run_vlm_eval.py` | the harness: runs, parses, scores, writes the report |
 | `build_manifest.py` | recomputes ground truth, copies frames, derives images |
 | `verify_run.py` | asserts the acceptance criteria on a finished run |

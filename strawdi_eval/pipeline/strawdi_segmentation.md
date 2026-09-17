@@ -13,8 +13,9 @@ multi-instance **segmentation** against the raw StrawDI ground-truth masks
 reported bboxes scored by the detection scorer unchanged as a cross-check.
 
 **Status: v0.1.** Validated on the full val batch (glm-5.3-flash via claude
-CLI, 2026-09-16, 100/100 calls parsed, verifier PASS over 1418 checks); see
-§6.
+CLI, 2026-09-16, 100/100 calls parsed, verifier PASS over 1418 checks — that
+batch predates the same-day switch to the `test` split; see §2 and the §6
+note).
 
 Implementation lives in `../seg/` (`run_segmentation_eval.py`, `lib/prompt.py`,
 `lib/seg_scoring.py`, `lib/render.py`, `schema/inventory_segmentation_schema.json`,
@@ -53,10 +54,11 @@ What is scored and what is not:
 
 ## 2. Input / output contract
 
-**Input:** the box pipeline's manifest, reused as-is — StrawDI_Db1 `val`
-frames (1008×756, snapshotted in `data/frames/`, delivered unchanged inside
-the 1280 px no-resize ceiling) plus the GT provenance. The seg pipeline adds
-no manifest step of its own.
+**Input:** the box pipeline's manifest, reused as-is — currently StrawDI_Db1
+`test` frames (200, 1008×756, snapshotted in `data/frames/`, delivered
+unchanged inside the 1280 px no-resize ceiling; `val` until 2026-09-16) plus
+the GT provenance. The seg pipeline adds no manifest step of its own, so it
+tracks whatever split the detection manifest carries.
 
 **Ground truth:** the raw label id-map PNGs (grayscale, 0 = background,
 1..N = instance, one bool mask per id, sorted by id — the same order as the
@@ -120,8 +122,8 @@ even for a perfect outliner. It is never "fixed" by loosening the metric.
 # via Claude Code (default: glm-5.3-flash, the multimodal GLM-5.3):
 python3 strawdi_eval/seg/run_segmentation_eval.py --dry-run        # plan + prompt, 0 calls
 python3 strawdi_eval/seg/run_segmentation_eval.py --limit 1 --tag smoke
-python3 strawdi_eval/seg/run_segmentation_eval.py --sample-id 108 --tag one
-python3 strawdi_eval/seg/run_segmentation_eval.py --jobs 3 --tag full   # 1 control + 100 calls
+python3 strawdi_eval/seg/run_segmentation_eval.py --sample-id 1017 --tag one
+python3 strawdi_eval/seg/run_segmentation_eval.py --jobs 3 --tag full   # 1 control + 200 calls
 
 # acceptance gate — must print PASS (needs the label mount in place):
 python3 strawdi_eval/seg/verify_strawdi_seg_run.py strawdi_eval/seg/runs/<run dir>
@@ -168,10 +170,16 @@ inputs and label masks stay PNG.
 
 ## 6. Reference points (examples, not the contract)
 
+All rows below ran on the **`val`** split (100 frames) before the manifest
+switched to `test` on 2026-09-16 — development/iteration history, not
+comparable to future test-split numbers. Every run dir snapshots its own
+manifest, so each row stays reproducible from its run directory.
+
 | date | model (cli) | calls | control | mask F1@0.5 (P / R) | box F1@0.5 | notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | 2026-09-16 | glm-5.3-flash (claude) | 1 | 2.2 px | **0.333** (0.40 / 0.286) | 0.333 | v0.1 prototype smoke, frame `1002` (7 GT): parse+schema 1/1 first attempt; mask IoU@0.25→0.75 F1 0.667→0.167; matched mask IoU 0.724; polygon-vs-bbox extent IoU 0.938; misses = white unripe fruit + occluded + border-clipped; the 3 FPs fragment one occluded fruit into overlapping pieces; $0.11, 78 s |
 | 2026-09-16 | glm-5.3-flash (claude) | 100 | 1.0 px | **0.665** (0.745 / 0.601) | 0.700 | **v0.1 full val batch (harness v0.1.0)** — parse + schema-valid 100/100, zero retries; mask F1 ladder 0.816@0.25 → 0.665@0.5 → 0.300@0.75 (P@0.25 0.913 — polygons land on the right fruit, strict thresholds cost fidelity); matched mask IoU 0.724; mask AP@50 0.581, mAP 0.246; box cross-check AP@50 0.619, mAP 0.329; recall large/medium/small = 0.99/0.61/**0.00** (128 small GT); occlusion split 0.73 vs 0.67 (the box pipeline's gap, shrunk); count bias −1.1; 2 out-of-frame polygons; $10.47, 44 min |
+| 2026-09-16 | k3-256k (codex) | 100 | 1.0 px | **0.718** (0.799 / 0.652) | 0.758 | full val batch — parse + schema-valid 100/100 after retry-merge (15 frames came back `empty`, provider-side tok=0 incl. the in-run low-effort retry; retried ~2 h later, 15/15 ok, merged per §7 retry-merge); mask F1 ladder 0.853@0.25 → 0.718@0.5 → 0.412@0.75; matched mask IoU 0.758; mask AP@50 0.610, mAP 0.300; box cross-check AP@50 0.659, mAP 0.413; recall large/medium/small = 1.00/0.70/**0.03** (4 of 128 small); occlusion split 0.78 vs 0.66; count bias −1.05; cost not reported by endpoint; 1.12 M tokens, ~60 min wall at jobs 3 |
 
 ## 7. Known behaviours
 
@@ -202,6 +210,31 @@ inputs and label masks stay PNG.
   geometry.
 * **Zero-fruit inventories are valid answers** and score as all-missed;
   distinct from "could not parse", which carries no numbers at all.
+* **Retry-merge (binding): failed records are retried back INTO the
+  originating run — never reported as a separate run.** When records end
+  up `empty` / `parse_error` / `schema_invalid` / `exec_error` after the
+  in-run retry policy (typically a transient provider outage — the
+  2026-09-16 k3-256k batch lost 15 consecutive frames to one), the fix is:
+  1. build a retry manifest = the detection manifest filtered to the
+     failed `sample_id`s (keep the schema, update `n_selected` /
+     `selection`);
+  2. run it with the SAME provider/model/effort (`--manifest <retry>`);
+     the retry run's own control must pass as usual;
+  3. replace the failed records in the originating run's
+     `responses.jsonl` with the retry records (assert one harness + one
+     base-harness fingerprint across the merge), archiving the replaced
+     records to `retried_<status>_responses.jsonl` and writing
+     `retry_merge_provenance.json` (retry run dir, manifest, sample ids)
+     in the run directory;
+  4. `--rebuild-report --out <orig run dir>` **passing the original
+     `--provider`/`--model`** — the report's provenance line reads the
+     CLI args on a rebuild, not the records, so a default rebuild would
+     mislabel the run as `claude`;
+  5. the verifier must PASS over the merged run (overlays and every
+     scored block are re-derived from the merged `responses.jsonl`).
+  The retry run directory is scratch provenance, not a result — the one
+  report is the originating run's. (The older `…-full-recovered`
+  directory pattern predates this rule; do not repeat it.)
 * The dataset lives on a removable mount (`/media/zfei/GLOWAY/...`); the
   runner needs it for GT masks at score time and the verifier needs it for
   GT + scorer reproducibility (sha256-guarded).

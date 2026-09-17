@@ -19,7 +19,7 @@ Invariants inherited from the base harness (``vlm_eval/AGENTS.md``):
   are copied untouched, and nothing drawn ever reaches the model.
 
 Usage (repo root):
-    python3 strawdi_eval/build_manifest.py [--limit 30] [--split val]
+    python3 strawdi_eval/build_manifest.py [--limit 30] [--split test]
 """
 
 from __future__ import annotations
@@ -59,7 +59,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dataset-root", type=Path, default=DEFAULT_DATASET_ROOT)
-    ap.add_argument("--split", choices=SPLITS, default="val")
+    ap.add_argument("--split", choices=SPLITS, default="test")
     ap.add_argument("--limit", type=int, default=None,
                     help="use only the first k of an evenly-spaced selection "
                          "(deterministic; indices recorded in the manifest)")

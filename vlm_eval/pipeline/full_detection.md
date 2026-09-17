@@ -3,7 +3,13 @@
 Standalone, **model-agnostic** spec of the first perception pipeline. More
 pipeline docs will live in this `pipeline/` subfolder; each one defines what
 the pipeline does, its input/output contract, and how to run it through the
-harness — independently of which model executes it.
+harness — independently of which model executes it. Its sibling
+[`full_segmentation.md`](full_segmentation.md) keeps this pipeline's output
+standard intact and adds a tenth field, `polygon` (an outline of each
+fruit's visible surface — qualitative + diagnostics on these scenes, which
+carry no mask ground truth); the StrawDI pipelines under
+`strawdi_eval/pipeline/` run the same standard on StrawDI_Db1, where
+segmentation is scored against GT masks.
 
 Implementation lives in the parent directory (`prompts.py`, `run_vlm_eval.py`,
 `schema/inventory_schema.json`); [`../AGENTS.md`](../AGENTS.md) remains the
@@ -29,11 +35,16 @@ model participates** — that is the point of the pipeline.
 
 ## 2. Input / output contract
 
-**Input:** one RGB frame. Sources are normalised to max edge ≤1280 px (a
-hard ceiling: silent downscaling would shift the coordinate frame). Current
-default source: the unlabelled multi-strawberry `shunba` scenes (qualitative
-only). With `--sources validation occluded shunba`, ground-truthed SROI frames
-are included and the nomination becomes scoreable.
+**Input:** one RGB frame from the unlabelled multi-strawberry `shunba`
+scenes, normalised to max edge ≤1280 px (a hard ceiling: silent downscaling
+would shift the coordinate frame). **Since 2026-09-17 the pipeline is
+shunba-only:** the default manifest build omits the SROI sources entirely —
+no frames copied, no ground truth computed, no few-shot exemplar — so the
+batch is entirely qualitative and the nomination (`target_index`) is asked
+and reported, never scored. The harness can still produce a ground-truthed
+SROI manifest for explicit experiments (`build_manifest.py --with-sroi`,
+then `--sources validation occluded shunba` at run time); that is outside
+this pipeline, and the pre-2026-09-17 reference points in §4 used it.
 
 **Output:** per frame, one JSON object:
 
@@ -91,9 +102,9 @@ python3 vlm_eval/run_vlm_eval.py --jobs 3 --tag full
 python3 vlm_eval/verify_run.py vlm_eval/runs/<run dir>
 ```
 
-Only `inventory_plain` runs by default → 10 calls on the default shunba scope
-(+1 synthetic control). To score the nomination against ground truth, add
-`--sources validation occluded shunba` (15 calls; 5 scored).
+Only `inventory_plain` runs → 10 calls on the shunba-only scope (+1
+synthetic control), all qualitative. (Scoring the nomination needs an SROI
+experiment build — see §2 — and is no longer part of this pipeline.)
 
 Non-negotiable gates regardless of provider (see AGENTS.md §1 for the why):
 
@@ -109,8 +120,13 @@ Non-negotiable gates regardless of provider (see AGENTS.md §1 for the why):
 
 ## 4. Reference points (examples, not the contract)
 
+Rows before 2026-09-17 predate the shunba-only scope: their scored column
+came from SROI experiment builds (manifests that still included
+`validation`/`occluded`); each run dir snapshots its own manifest.
+
 | date | model (cli) | calls | control | ok / no_pick_point / schema-invalid | scored nomination (median err) |
 | --- | --- | --- | --- | --- | --- |
+| 2026-09-17 | glm-5.3-flash (claude) | 10 | 0.0 px | 6 / 1 / **3** | n/a (shunba-only pipeline) |
 | 2026-09-14 | glm-5.3-flash (claude) | 10 | 1.0 px | 8 / 2 / **0** | n/a (shunba-only) |
 | 2026-09-14 | glm-5.3-flash (claude) | 75-run subset | 1.0 px | — | 16.2 px (`inventory_plain`, 5 GT frames) |
 | 2026-09-14 | deepseek-flash (codex) | 75 | 1.4 px | 71 / 1 / 0 (all styles) | 23.8 px (`inventory_json`, same frames) |
@@ -118,7 +134,11 @@ Non-negotiable gates regardless of provider (see AGENTS.md §1 for the why):
 Typical cost per frame on a flash-tier model: ~3k input + 5–10k output tokens
 (the census describes every fruit). Empty or over-long scenes can exhaust the
 output budget; the harness retries once at reduced effort and records
-`fallback_used`.
+`fallback_used`. (The 2026-09-17 row's three `schema_invalid` were all the
+documented extra-note-field decoration — §5 — on late fruits of dense scenes:
+glm-5.3-flash flakiness, not a scope effect. The base harness does not
+resample schema-invalid replies; the segmentation sibling does, and its
+same-effort resample recovered 3/3 identical failures the day before.)
 
 ## 5. Known behaviours
 

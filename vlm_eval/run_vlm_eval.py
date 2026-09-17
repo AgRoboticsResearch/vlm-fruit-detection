@@ -262,8 +262,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--sources", nargs="*", default=None,
                     help="only these manifest sources. Default: "
                          f"{' '.join(DEFAULT_SOURCES)} (unlabelled, qualitative). "
-                         "Pass 'validation occluded shunba' to restore the "
-                         "ground-truthed SROI frames and the scored metrics.")
+                         "The pipeline manifest is shunba-only since 2026-09-17; "
+                         "'validation occluded shunba' needs a --with-sroi "
+                         "experiment build of the manifest first.")
     ap.add_argument("--model", default=None,
                     help="model slug; defaults to the user's configured model")
     ap.add_argument("--reasoning-effort", default=None,
@@ -1647,8 +1648,10 @@ def write_report(run_dir: Path, args, manifest, control, df, summary, histogram_
             add("- **No scored runs.** This batch contains no ground-truthed frames, so "
                 "there is no picking-point error to report. Every result below is "
                 "**qualitative**: what the model found and what it said about it, "
-                "checked by eye, not by a number. Switch the scored sources back on "
-                "with `--sources validation occluded shunba`.")
+                "checked by eye, not by a number. (The pipeline is shunba-only since "
+                "2026-09-17; a scored run needs an explicit SROI experiment build — "
+                "`build_manifest.py --with-sroi` first, then `--sources validation "
+                "occluded shunba`.)")
     elif delivered is False:
         add("- **Vision delivery: NO.** The synthetic control could not be read, so the "
             "CLI is not delivering images to this model and the numbers below are "

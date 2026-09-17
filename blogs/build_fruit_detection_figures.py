@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
-"""Rebuild blog figures from saved predictions; makes no model calls.
+"""Rebuild blog figures from saved segmentation responses; makes no model calls.
+
+Data source: the StrawDI instance-segmentation runs on the 200-image TEST
+split (strawdi_eval/seg/runs/). Every saved ok record is re-scored from the
+raw label PNGs (sha256-guarded, read-only) and the recomputed values are
+asserted against the stored ones before any figure is drawn.
+
+While the GPT-6 Astra test batch is still completing, its records are merged
+from the full run plus its retry run and marked partial (GPT_PENDING below,
+hatched bars, † labels). When the batch finishes: point the GPT-6 Astra entry
+at the final run directory(ies), set GPT_PENDING = False, rerun — every
+figure and printed number updates.
+
 Run from any directory: python3 blogs/build_fruit_detection_figures.py
 """
 from pathlib import Path
@@ -13,170 +25,315 @@ os.environ.setdefault('MPLCONFIGDIR', '/tmp/strawberry-blog-matplotlib')
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
-from matplotlib.colors import ListedColormap
+from matplotlib.patches import Polygon
 import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from strawdi_eval.lib.scoring import score_image, precision_recall_f1, ap_metrics, prepare_predictions, size_stratified
+from strawdi_eval.lib.scoring import precision_recall_f1
+from strawdi_eval.seg.lib.seg_scoring import (score_masks_image, prepare_predictions_masks,
+                                              ap_metrics_masks)
+
 OUT = ROOT / 'blogs/assets/fruit_detection_is_solved_by_vlms'
 OUT.mkdir(parents=True, exist_ok=True)
+
+# --- run configuration: the only block to touch when runs are replaced ------
+SEG_RUNS = ROOT / 'strawdi_eval/seg/runs'
 SPECS = [
- ('Kimi', '20260915-110939-kimi-for-coding-default-codex-strawdi_eval-full'),
- ('GLM', '20260915-113703-glm-5.3-flash-default-claude-strawdi_eval-full'),
- ('DeepSeek', '20260915-143336-deepseek-flash-high-codex-strawdi_eval-full'),
- ('GPT-6 Astra', '20260915-162534-gpt-6-astra-low-codex-strawdi_eval-consolidated'),
+ ('Kimi K3',    [SEG_RUNS / '20260916-201059-k3-256k-default-codex-strawdi_seg-full']),
+ ('GLM',        [SEG_RUNS / '20260916-194317-glm-5.3-flash-default-claude-strawdi_seg-full']),
+ ('DeepSeek',   [SEG_RUNS / '20260916-215556-deepseek-flash-default-codex-strawdi_seg-full']),
+ ('GPT-6 Astra', [SEG_RUNS / '20260916-194636-gpt-6-astra-low-codex-strawdi_seg-full',
+                  SEG_RUNS / '20260917-062635-gpt-6-astra-low-codex-strawdi_seg-retry']),
 ]
+GPT_PENDING = True          # GPT-6 Astra test batch still completing -> hatched/†
 COLORS = ['#687a95', '#da9b35', '#8a73ac', '#138577']
-plt.rcParams.update({'font.family':'DejaVu Sans', 'font.size':10, 'axes.spines.top':False,
-                     'axes.spines.right':False, 'axes.titleweight':'bold', 'savefig.facecolor':'white'})
+GALLERY_SCENES = ['1251', '1838', '2085', '2532', '1669', '926']   # GPT-6 Astra panels
+COMPARE_SCENE = '2532'      # same-scene four-model comparison
+CHAOS_SCENES = ['sb04', 'IMG_7665']
+CHAOS_RUNS = {              # None -> placeholder panel (run not started yet)
+ 'GPT-6 Astra': None,
+ 'GLM': ROOT / 'vlm_eval/chaos/runs/20260917-100620-glm-5.3-flash-default-claude-vlm_chaos-full',
+}
+
+plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 10,
+                     'axes.spines.top': False, 'axes.spines.right': False,
+                     'savefig.facecolor': 'white'})
 
 def read(path):
- return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
-runs = {name:read(ROOT/'strawdi_eval/runs'/folder/'responses.jsonl') for name,folder in SPECS}
-# Check the comparison contract and recompute every saved detection result.
-ref = runs['GPT-6 Astra']
-for records in runs.values():
- assert len(records)==100 and len({r['sample_id'] for r in records})==100
- for r,g in zip(records,ref):
-  assert (r['sample_id'],r['prompt'],r['gt_boxes'],r['gt_areas']) == (g['sample_id'],g['prompt'],g['gt_boxes'],g['gt_areas'])
-  if r['status']=='ok':
-   scored=score_image(r['inventory'],r['gt_boxes'],r['gt_areas'],r['frame_w'],r['frame_h'])
-   for key,value in scored.items(): assert r[key]==value, (r['sample_id'],key)
-common=set.intersection(*[{r['sample_id'] for r in records if r['status']=='ok'} for records in runs.values()])
-assert len(common)==98
+def load_gt_masks(record):
+    """Per-instance bool masks from the label id-map PNG (sha256-guarded)."""
+    label_path = Path(record['label_image'])
+    digest = hashlib.sha256(label_path.read_bytes()).hexdigest()
+    assert digest == record['label_sha256'], f'{label_path.name}: label sha256 drifted'
+    mask = np.array(Image.open(label_path))
+    return [mask == int(v) for v in sorted(np.unique(mask)) if v != 0]
 
-def summarize(records):
- valid=[r for r in records if r['status']=='ok']
- result={'frames':len(records),'parsed':len(valid),'gt':sum(len(r['gt_boxes']) for r in valid)}
- for threshold in ['25','50','75','center']:
-  tp,fp,fn=(sum(r[f'{key}_{threshold}'] for r in valid) for key in ('tp','fp','fn'))
-  p,rec,f1=precision_recall_f1(tp,fp,fn)
-  result.update({f'{k}_{threshold}':v for k,v in zip(('tp','fp','fn','precision','recall','f1'),(tp,fp,fn,p,rec,f1))})
- result.update(ap_metrics([{'sample_id':r['sample_id'],'preds':prepare_predictions(r['inventory'],r['frame_w'],r['frame_h']),'gt_boxes':r['gt_boxes']} for r in valid]))
- result['size']=size_stratified(valid)
- result['count_mae']=float(np.mean([abs(r['count_error']) for r in valid]))
- return result
+# --- load + merge (later dirs fill in samples the earlier ones failed on) ---
+runs = {}
+for name, dirs in SPECS:
+    merged = {}
+    for d in dirs:
+        for r in read(d / 'responses.jsonl'):
+            cur = merged.get(r['sample_id'])
+            if cur is None or (cur['status'] != 'ok' and (r['status'] == 'ok' or True)):
+                if cur is None or cur['status'] != 'ok' or r['status'] == 'ok':
+                    merged[r['sample_id']] = r
+    runs[name] = merged
 
-summary={}
-for name,folder in SPECS:
- records=runs[name]
- summary[name]={'run':folder, 'reported':summarize(records), 'common98':summarize([r for r in records if r['sample_id'] in common]),
- 'usage':{k:sum(r.get(k) or 0 for r in records)/100 for k in ['input_tokens','cached_input_tokens','output_tokens','reasoning_output_tokens','total_tokens','wall_s']},
- 'provenance':{k:records[0][k] for k in ['model','provider','reasoning_effort','harness_version','harness_fingerprint','base_harness_version','base_harness_fingerprint']},
- 'responses_sha256':hashlib.sha256((ROOT/'strawdi_eval/runs'/folder/'responses.jsonl').read_bytes()).hexdigest()}
-# First-pass sensitivity is separate; never overwrite the harness's failure-excluding metrics.
-original=read(ROOT/'strawdi_eval/runs'/SPECS[-1][1]/'history/original_responses.jsonl')
-summary['GPT-6 Astra']['original']=summarize(original)
-gptu=summary['GPT-6 Astra']['usage']
-summary['GPT-6 Astra']['api_estimate']={'uncached_usd_per_image':(10*gptu['input_tokens']+50*gptu['output_tokens'])/1e6,
- 'cached_read_usd_per_image':(10*(gptu['input_tokens']-gptu['cached_input_tokens'])+gptu['cached_input_tokens']+50*gptu['output_tokens'])/1e6,
- 'source':'https://developers.openai.com/api/docs/models/gpt-6-astra','checked':'2026-09-15',
- 'note':'Standard-rate estimate from recorded tokens; includes recorded retries, excludes controls and unreported usage/cache-write fees; not an invoice.'}
-(OUT/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
-with (OUT/'comparison.csv').open('w') as f:
- fields=['model','parsed','gt','precision_50','recall_50','f1_50','f1_75','ap_50','map_50_95','count_mae','common98_f1']
- writer=csv.DictWriter(f,fieldnames=fields);writer.writeheader()
- for name,_ in SPECS:
-  s=summary[name];writer.writerow({'model':name,**{k:s['reported'][k] for k in fields[1:-1]},'common98_f1':s['common98']['f1_50']})
+# Consistency: same 200-image manifest, same GT, and every stored ok record
+# reproduces exactly under the saved scorer + raw labels.
+ref = next(r for r in runs['GLM'].values())
+assert all(len(records) == 200 for records in runs.values())
+_gt_cache = {}
+def gt_masks_for(r):
+    if r['sample_id'] not in _gt_cache:
+        _gt_cache[r['sample_id']] = load_gt_masks(r)
+    return _gt_cache[r['sample_id']]
 
-def save(fig,name):
- fig.savefig(OUT/f'{name}.png',dpi=180,bbox_inches='tight')
- fig.savefig(OUT/f'{name}.svg',bbox_inches='tight')
- plt.close(fig)
+for name, _ in SPECS:
+    for sid, r in runs[name].items():
+        g = runs['GLM'][sid]
+        assert (r['gt_boxes'], r['gt_areas']) == (g['gt_boxes'], g['gt_areas'])
+        if r['status'] == 'ok':
+            scored = score_masks_image(r['inventory'], gt_masks_for(r), r['gt_areas'],
+                                       r['frame_w'], r['frame_h'])
+            for key in ('tp_25', 'fp_25', 'fn_25', 'tp_50', 'fp_50', 'fn_50',
+                        'tp_75', 'fp_75', 'fn_75', 'mean_matched_iou_50'):
+                assert r[key] == scored[key], (name, sid, key)
+            assert r['matches_50'] == scored['matches_50'], (name, sid)
 
-fig,axes=plt.subplots(1,2,figsize=(12,4.5),layout='constrained')
-x=np.arange(4)
-for ax,cohort,title in zip(axes,['reported','common98'],['Saved runs: 99 / 99 / 100 / 100 valid images','Same 98 images: every model returned valid JSON']):
- for i,(key,label) in enumerate([('precision_50','Precision'),('recall_50','Recall'),('f1_50','F1')]):
-  vals=[100*summary[name][cohort][key] for name,_ in SPECS]
-  bars=ax.bar(x+(i-1)*.24,vals,.23,label=label,color=['#9fbcc5','#6095a4','#194e62'][i])
-  ax.bar_label(bars,fmt='%.1f',fontsize=8,padding=3)
- ax.set(xticks=x,xticklabels=[n for n,_ in SPECS],ylim=(0,105),ylabel='Score (%) at box IoU ≥ 0.50',title=title)
- ax.grid(axis='y',alpha=.16);ax.set_axisbelow(True)
-axes[0].legend(loc='upper left',ncol=3,fontsize=9)
-fig.suptitle('GPT-6 Astra leads this strawberry detection comparison',fontsize=16,fontweight='bold')
-save(fig,'detection_comparison')
+def aggregate(records):
+    valid = [r for r in records.values() if r['status'] == 'ok']
+    out = {'n_valid': len(valid), 'gt': sum(len(r['gt_boxes']) for r in valid)}
+    for t in ('25', '50', '75'):
+        tp, fp, fn = (sum(r[f'{k}_{t}'] for r in valid) for k in ('tp', 'fp', 'fn'))
+        p, rec, f1 = precision_recall_f1(tp, fp, fn)
+        out.update({f'tp_{t}': tp, f'fp_{t}': fp, f'fn_{t}': fn,
+                    f'precision_{t}': p, f'recall_{t}': rec, f'f1_{t}': f1})
+    out.update(ap_metrics_masks([{'preds': prepare_predictions_masks(r['inventory'], r['frame_w'], r['frame_h']),
+                                  'gt_masks': gt_masks_for(r)} for r in valid]))
+    matches = [m for r in valid for m in r['matches_50']]
+    out['n_matched'] = len(matches)
+    out['mean_matched_iou'] = float(np.mean([m['iou'] for m in matches]))
+    out['median_matched_iou'] = float(np.median([m['iou'] for m in matches]))
+    strata = []
+    for lo, hi in ((0, 1024), (1024, 9216), (9216, 10**12)):
+        n_gt = n_hit = 0
+        for r in valid:
+            hit = {m['gt_index'] for m in r['matches_50']}
+            for j, area in enumerate(r['gt_areas']):
+                if lo <= area < hi:
+                    n_gt += 1
+                    n_hit += j in hit
+        strata.append({'band': (lo, hi), 'n_gt': n_gt, 'n_matched': n_hit,
+                       'recall': n_hit / n_gt if n_gt else None})
+    out['size'] = strata
+    out['count_mae'] = float(np.mean([abs(r['count_error']) for r in valid]))
+    out['box_f1_50'] = precision_recall_f1(*[sum(r['box_metrics'][k] for r in valid)
+                                             for k in ('tp_50', 'fp_50', 'fn_50')])[2] \
+        if valid and isinstance(valid[0].get('box_metrics'), dict) else None
+    out['usage'] = {k: sum(r.get(k) or 0 for r in records.values()) / len(records)
+                    for k in ('input_tokens', 'cached_input_tokens', 'output_tokens',
+                              'reasoning_output_tokens', 'total_tokens', 'wall_s')}
+    return out
 
-fig,axes=plt.subplots(1,2,figsize=(11.5,4.4),layout='constrained')
-for (name,_),color in zip(SPECS,COLORS):
- s=summary[name]['reported']
- axes[0].plot([.25,.5,.75],[100*s[f'f1_{t}'] for t in ['25','50','75']],'-o',color=color,label=name,lw=2)
- axes[1].plot(range(3),[100*z['recall'] for z in s['size']],'-o',color=color,lw=2)
-axes[0].set(xlabel='Box IoU required for a match',ylabel='F1 (%)',xticks=[.25,.5,.75],ylim=(0,105),title='Tighter boxes still distinguish GPT')
+summary = {}
+for name, dirs in SPECS:
+    summary[name] = {'runs': [d.name for d in dirs], 'reported': aggregate(runs[name])}
+common = set.intersection(*[{sid for sid, r in records.items() if r['status'] == 'ok'}
+                            for records in runs.values()])
+for name, _ in SPECS:
+    summary[name]['common'] = aggregate({sid: runs[name][sid] for sid in common})
+(OUT / 'summary.json').write_text(json.dumps(summary, indent=2, default=str) + '\n')
+with (OUT / 'comparison.csv').open('w') as f:
+    fields = ['model', 'n_valid', 'gt', 'precision_50', 'recall_50', 'f1_50', 'f1_75',
+              'ap_50', 'map_50_95', 'mean_matched_iou', 'count_mae', 'common_f1_50']
+    writer = csv.DictWriter(f, fieldnames=fields)
+    writer.writeheader()
+    for name, _ in SPECS:
+        s = summary[name]
+        writer.writerow({'model': name,
+                         **{k: s['reported'][k] for k in fields[1:-1]},
+                         'common_f1_50': s['common']['f1_50']})
+
+def save(fig, name):
+    fig.savefig(OUT / f'{name}.png', dpi=180, bbox_inches='tight')
+    fig.savefig(OUT / f'{name}.svg', bbox_inches='tight')
+    plt.close(fig)
+
+def tag(name):
+    return f'{name}†' if GPT_PENDING and name == 'GPT-6 Astra' else name
+
+def hatch(name):
+    return '///' if GPT_PENDING and name == 'GPT-6 Astra' else ''
+
+# --- scientific panels: original pixels + saved polygons, GT mask as fill ---
+def seg_panel(ax, r, title):
+    ax.imshow(Image.open(ROOT / 'strawdi_eval' / r['image']))
+    masks = gt_masks_for(r)
+    union = np.any(masks, axis=0)
+    fill = np.zeros((*union.shape, 4))
+    fill[union] = (1, 1, 1, 0.30)
+    ax.imshow(fill, interpolation='nearest')
+    matched = {m['pred_index'] for m in r['matches_50']}
+    for i, fruit in enumerate(r['inventory']):
+        poly = fruit.get('polygon')
+        if poly:
+            ax.add_patch(Polygon(poly, closed=True, fill=False, lw=1.7,
+                                 ec='#46ef73' if i in matched else '#ff705b'))
+    for j in r['fn_gt_indices_50']:
+        ys, xs = np.nonzero(masks[j])
+        ax.text(xs.mean(), ys.mean(), 'MISS', color='#ff4d4d', fontsize=8,
+                fontweight='bold', ha='center', va='center')
+    ax.set_title(title, fontsize=10)
+    ax.axis('off')
+
+# Figure: GPT-6 Astra gallery — six test scenes
+fig, axes = plt.subplots(2, 3, figsize=(15, 8.4), layout='constrained')
+for ax, sid in zip(axes.flat, GALLERY_SCENES):
+    r = runs['GPT-6 Astra'][sid]
+    assert r['status'] == 'ok', f'gallery scene {sid} not ok in the GPT run yet'
+    seg_panel(ax, r, f"image {sid} — TP {r['tp_50']} · FP {r['fp_50']} · FN {r['fn_50']}")
+fig.suptitle('GPT-6 Astra, zero-shot, on StrawDI test scenes (visible-surface polygons)', fontsize=14)
+fig.supxlabel('White fill: ground-truth instance mask     Green: matched prediction     Coral: unmatched prediction     MISS: labelled fruit not found',
+              fontsize=9)
+save(fig, 'gpt_gallery')
+
+# Figure: same scene, four models
+fig, axes = plt.subplots(2, 2, figsize=(11, 8.6), layout='constrained')
+for ax, (name, _) in zip(axes.flat, SPECS):
+    r = runs[name][COMPARE_SCENE]
+    seg_panel(ax, r, f"{tag(name)} — TP {r['tp_50']} · FP {r['fp_50']} · FN {r['fn_50']}")
+fig.suptitle(f'Same scene, same prompt — StrawDI test image {COMPARE_SCENE}', fontsize=14)
+fig.supxlabel('White fill: ground-truth instance mask     Green: matched prediction     Coral: unmatched prediction     MISS: labelled fruit not found',
+              fontsize=9)
+save(fig, 'same_scene_seg')
+
+# Figure: segmentation scores
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), layout='constrained')
+x = np.arange(4)
+for i, (key, label) in enumerate([('precision_50', 'Precision'), ('recall_50', 'Recall'), ('f1_50', 'F1')]):
+    vals = [100 * summary[name]['reported'][key] for name, _ in SPECS]
+    bars = axes[0].bar(x + (i - 1) * .24, vals, .23, label=label,
+                       color=['#9fbcc5', '#6095a4', '#194e62'][i])
+    for rect, (name, _) in zip(bars, SPECS):
+        rect.set_hatch(hatch(name))
+    axes[0].bar_label(bars, fmt='%.1f', fontsize=8, padding=3)
+axes[0].set(xticks=x, xticklabels=[tag(n) for n, _ in SPECS], ylim=(0, 105),
+            ylabel='Score (%) at mask IoU ≥ 0.50',
+            title='Precision, recall and F1 on visible-surface masks')
+axes[0].grid(axis='y', alpha=.16)
+axes[0].set_axisbelow(True)
+axes[0].legend(loc='upper left', ncol=3, fontsize=9)
+for (name, _), color in zip(SPECS, COLORS):
+    s = summary[name]['reported']
+    axes[1].plot([.25, .5, .75], [100 * s[f'f1_{t}'] for t in ('25', '50', '75')],
+                 '--o' if GPT_PENDING and name == 'GPT-6 Astra' else '-o',
+                 color=color, label=tag(name), lw=2)
+axes[1].set(xlabel='Mask IoU required for a match', ylabel='F1 (%)', xticks=[.25, .5, .75],
+            ylim=(0, 105), title='F1 as the localization requirement tightens')
+axes[1].legend(fontsize=9)
+axes[1].grid(alpha=.18)
+fig.suptitle('Instance segmentation on the StrawDI test split (200 images)', fontsize=14)
+save(fig, 'seg_scores')
+
+# Figure: recall by visible instance size
+fig, ax = plt.subplots(figsize=(8.5, 4.4), layout='constrained')
+w = .2
+for i, ((name, _), color) in enumerate(zip(SPECS, COLORS)):
+    strata = summary[name]['reported']['size']
+    vals = [100 * z['recall'] for z in strata]
+    bars = ax.bar(np.arange(3) + (i - 1.5) * w, vals, w * .92, label=tag(name), color=color,
+                  hatch=hatch(name))
+    for rect, z in zip(bars, strata):
+        ax.text(rect.get_x() + rect.get_width() / 2, rect.get_height() + 2,
+                f"{z['n_matched']}/{z['n_gt']}", ha='center', fontsize=7.5)
+ax.set(xticks=range(3),
+       xticklabels=['Small\n<1,024 px²', 'Medium\n1,024–9,215 px²', 'Large\n≥9,216 px²'],
+       ylabel='Recall (%) at mask IoU ≥ 0.50', ylim=(0, 112),
+       title='Recall by visible instance size — small fruit remains the hard case')
+ax.grid(axis='y', alpha=.16)
+ax.set_axisbelow(True)
+ax.legend(fontsize=9, ncol=4)
+save(fig, 'size_recall')
+
+# Figure: tokens and latency
+fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.4), layout='constrained')
+u = [summary[name]['reported']['usage'] for name, _ in SPECS]
+for i, (field, label, color) in enumerate([('input_tokens', 'Input', '#517b99'),
+                                           ('output_tokens', 'Output (includes reasoning)', '#dfab51')]):
+    vals = [r[field] for r in u]
+    bottom = [r['input_tokens'] if i else 0 for r in u]
+    bars = axes[0].bar(x, vals, bottom=bottom, label=label, color=color)
+    for rect, (name, _) in zip(bars, SPECS):
+        rect.set_hatch(hatch(name))
+    for j, v in enumerate(vals):
+        axes[0].text(j, bottom[j] + v / 2, f'{v:,.0f}', ha='center', va='center', fontsize=8)
+axes[0].set(xticks=x, xticklabels=[tag(n) for n, _ in SPECS],
+            ylabel='Mean recorded tokens per scheduled image',
+            title='The inventory is more than a polygon')
 axes[0].legend(fontsize=9)
-axes[1].set(xticks=range(3),xticklabels=['Small\n<1,024 px²','Medium\n1,024–9,215 px²','Large\n≥9,216 px²'],ylabel='Recall (%) at IoU ≥ 0.50',ylim=(0,105),title='Small fruit remains the hard case')
-for ax in axes: ax.grid(alpha=.18)
-fig.suptitle('Localization and object size • each run’s valid images',fontsize=15,fontweight='bold')
-save(fig,'localization_and_size')
+bars = axes[1].bar(x, [r['wall_s'] for r in u], color=COLORS)
+for rect, (name, _) in zip(bars, SPECS):
+    rect.set_hatch(hatch(name))
+axes[1].bar_label(bars, fmt='%.1f s', padding=4)
+axes[1].set(xticks=x, xticklabels=[tag(n) for n, _ in SPECS],
+            ylabel='Mean recorded call time (seconds)',
+            title='Seconds per image, including recorded retries')
+fig.suptitle('Operational cost • all 200 scheduled images per model', fontsize=14)
+save(fig, 'tokens_latency')
 
-fig,axes=plt.subplots(1,2,figsize=(11.5,4.4),layout='constrained')
-u=[summary[name]['usage'] for name,_ in SPECS]
-for i,(field,label,color) in enumerate([('input_tokens','Input','#517b99'),('output_tokens','Output (includes reasoning)','#dfab51')]):
- vals=[r[field] for r in u];bottom=[r['input_tokens'] if i else 0 for r in u]
- axes[0].bar(x,vals,bottom=bottom,label=label,color=color)
- for j,v in enumerate(vals): axes[0].text(j,bottom[j]+v/2,f'{v:,.0f}',ha='center',va='center',fontsize=9)
-axes[0].set(xticks=x,xticklabels=[n for n,_ in SPECS],ylabel='Mean recorded tokens per scheduled image',ylim=(0,19000),title='The inventory is more than four coordinates')
-axes[0].legend(fontsize=9)
-bars=axes[1].bar(x,[r['wall_s'] for r in u],color=COLORS)
-axes[1].bar_label(bars,fmt='%.1f s',padding=4)
-axes[1].set(xticks=x,xticklabels=[n for n,_ in SPECS],ylabel='Mean recorded call time (seconds)',ylim=(0,125),title='Seconds per image, including recorded retries')
-fig.suptitle('Operational cost • all 100 scheduled images per model',fontsize=15,fontweight='bold')
-save(fig,'tokens_and_latency')
+# Figure: private chaotic scenes, qualitative (no ground truth exists)
+chaos = {}
+for model, d in CHAOS_RUNS.items():
+    chaos[model] = {}
+    if d is not None and (d / 'responses.jsonl').exists():
+        for r in read(d / 'responses.jsonl'):
+            if r['status'] == 'ok':
+                chaos[model][r['sample_id']] = r
 
-# Scientific image panels use original pixels as a background and saved boxes as data.
-def panel(ax,r,title,focus=None,show_gt=True):
- ax.imshow(Image.open(ROOT/'strawdi_eval'/r['image']))
- if show_gt:
-  for box in r['gt_boxes']:
-   x1,y1,x2,y2=box;ax.add_patch(Rectangle((x1,y1),x2-x1,y2-y1,fill=False,ec='#00e5ff',lw=1.6,ls='--'))
- matched={m['pred_index'] for m in r['matches_50']}
- for i,fruit in enumerate(r['inventory']):
-  x1,y1,x2,y2=fruit['bbox'];color='#46ef73' if i in matched else '#ff705b'
-  ax.add_patch(Rectangle((x1,y1),x2-x1,y2-y1,fill=False,ec=color,lw=1.5))
- if focus: ax.set_xlim(focus[0],focus[2]);ax.set_ylim(focus[3],focus[1])
- ax.set_title(title,fontsize=10);ax.axis('off')
+def chaos_panel(ax, r, scene, model):
+    img = Image.open(ROOT / 'vlm_eval' / r['image']) if r else \
+          Image.open(ROOT / 'vlm_eval/data/frames' / f'chaos__{scene}.png')
+    ax.imshow(img)
+    if r is None:
+        ax.text(0.5, 0.5, f'{model}\nrun in progress', transform=ax.transAxes,
+                ha='center', va='center', fontsize=13, color='white',
+                bbox=dict(boxstyle='round,pad=0.45', fc='black', alpha=.65, ec='none'))
+    else:
+        cmap = plt.get_cmap('RdYlGn')
+        for fruit in r['inventory']:
+            poly = fruit.get('polygon')
+            if poly:
+                ax.add_patch(Polygon(poly, closed=True, fill=False, lw=1.7,
+                                     ec=cmap((fruit.get('redness_pct') or 0) / 100)))
+        ax.set_title(f"{scene} — {model}: {len(r['inventory'])} fruit reported", fontsize=11)
+    if r is None:
+        ax.set_title(f"{scene} — {model}", fontsize=11)
+    ax.axis('off')
 
-fig,axes=plt.subplots(1,4,figsize=(15,4),layout='constrained')
-for ax,(name,_) in zip(axes,SPECS):
- r=next(r for r in runs[name] if r['sample_id']=='108')
- panel(ax,r,f"{name}\nTP {r['tp_50']} · FP {r['fp_50']} · FN {r['fn_50']}")
-fig.suptitle('Same scene, same prompt • StrawDI image 108',fontsize=16,fontweight='bold')
-fig.supxlabel('Dashed cyan: ground truth     Green: matched prediction     Coral: unmatched prediction',fontsize=10)
-save(fig,'same_scene')
+fig, axes = plt.subplots(len(CHAOS_SCENES), len(CHAOS_RUNS), figsize=(13, 8.2),
+                         layout='constrained')
+for row, scene in enumerate(CHAOS_SCENES):
+    for col, model in enumerate(CHAOS_RUNS):
+        chaos_panel(axes[row, col], chaos[model].get(scene), scene, model)
+fig.suptitle('Zero-shot on private chaotic scenes — polygon coloured by reported redness (no ground truth)',
+             fontsize=13)
+save(fig, 'chaos_private')
 
-fig,axes=plt.subplots(2,3,figsize=(12,7.5),layout='constrained')
-cases=[('108',(775,155,890,340),'Seeded green fruit: no separate GT instance'),('113',(835,155,985,285),'Red fruit under a leaf: no GT instance'),('1717',(465,160,540,245),'Whole-fruit box versus visible-mask box')]
-manifest=json.loads((ROOT/'strawdi_eval/runs'/SPECS[-1][1]/'manifest.json').read_text())
-for col,(sid,focus,title) in enumerate(cases):
- r=next(r for r in ref if r['sample_id']==sid)
- panel(axes[0,col],r,f'Image {sid}\n{title}',focus)
- sample=next(s for s in manifest['samples'] if s['sample_id']==sid)
- mask=np.asarray(Image.open(sample['label_image']))
- mask_colors=list(plt.get_cmap('tab20').colors)
- mask_colors[0]=(0.08,0.10,0.13)
- axes[1,col].imshow(mask,cmap=ListedColormap(mask_colors),vmin=0,vmax=19,interpolation='nearest')
- axes[1,col].set(xlim=(focus[0],focus[2]),ylim=(focus[3],focus[1]),title='Dataset instance mask • identical crop')
- axes[1,col].axis('off')
-fig.suptitle('Inspect the labels before interpreting every unmatched box as hallucination',fontsize=14,fontweight='bold')
-fig.supxlabel('Dashed cyan: GT box     Green: match     Coral: unmatched prediction     Dark mask pixels: background',fontsize=9)
-save(fig,'annotation_examples')
-
-# Qualitative only: original private scene with outline annotations, no counts or scores.
-p=ROOT/'vlm_eval/runs/20260914-191505-gpt-6-astra-medium-codex-vlm_eval-full'
-r=next(r for r in read(p/'responses.jsonl') if r['style']=='inventory_plain' and r['sample_id']=='sb01')
-fig,ax=plt.subplots(figsize=(10,7),layout='constrained')
-ax.imshow(Image.open(ROOT/'vlm_eval'/r['image']))
-for i,f in enumerate(r['inventory']):
- x1,y1,x2,y2=f['bbox'];color='#08d9e8' if i==r['target_index'] else '#ffd166'
- ax.add_patch(Rectangle((x1,y1),x2-x1,y2-y1,fill=False,ec=color,lw=1.7))
-ax.set_title('A private greenhouse scene: inventory and a proposed picking target',fontsize=13)
-ax.axis('off');fig.supxlabel('Amber: reported fruit     Cyan: proposed target     Qualitative output; no ground-truth labels',fontsize=10)
-save(fig,'beyond_detection')
-print((OUT/'comparison.csv').read_text())
-for name,_ in SPECS: print(name,summary[name]['usage'])
-print('GPT estimates:',summary['GPT-6 Astra']['api_estimate'])
-print('GPT original:',summary['GPT-6 Astra']['original'])
+# --- blog-ready numbers ------------------------------------------------------
+print((OUT / 'comparison.csv').read_text())
+print(f'common subset: {len(common)} images (the GPT-6 Astra valid set)')
+for name, _ in SPECS:
+    s = summary[name]['reported']
+    print(f"{name}: valid {s['n_valid']}/200  F1@50 {100*s['f1_50']:.1f}  F1@75 {100*s['f1_75']:.1f}  "
+          f"AP50 {100*s['ap_50']:.1f}  mAP {100*s['map_50_95']:.1f}  meanIoU {s['mean_matched_iou']:.3f}  "
+          f"MAE {s['count_mae']:.2f}  boxF1@50 {100*(s['box_f1_50'] or 0):.1f}  "
+          f"commonF1@50 {100*summary[name]['common']['f1_50']:.1f}")
+    print(f"   size recall: " + '  '.join(f"{z['n_matched']}/{z['n_gt']}" for z in s['size']) +
+          f"   tokens in/out {s['usage']['input_tokens']:.0f}/{s['usage']['output_tokens']:.0f}  "
+          f"wall {s['usage']['wall_s']:.1f}s")
