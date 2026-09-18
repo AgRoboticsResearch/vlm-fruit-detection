@@ -224,7 +224,7 @@ verify.
 
 ## 2. Canonical workflow
 
-Run from the repo root (`/mnt/data0/code/sroi/strawberry_detection`).
+Run from `blog_study/` (`/mnt/data0/code/sroi/strawberry_detection/blog_study`).
 
 ```bash
 # 0. See what prompts exist; pick the ones you want (by name OR by title)
@@ -547,8 +547,8 @@ Do not add these back without an explicit request:
   observed to differ by ~10 px — so treat style gaps of that order as noise, but
   do not reintroduce a variance harness by default.
 * **Any detector / tracker / segmenter in the loop.** The whole point is raw
-  capability. `weights/yolov11-m-best.pt` and the `infer_*.py` scripts in the
-  repo root are a separate, unrelated pipeline.
+  capability. `weights/yolov11-m-best.pt` and the `infer_*.py` scripts in
+  `small_detector/` at the repo root are a separate, unrelated pipeline.
 * **Automatic GLM comparison.** Wired but unvalidated.
 
 ---

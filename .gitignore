@@ -2,24 +2,23 @@
 __pycache__/
 *.py[cod]
 *.egg-info/
+*.pdf
 .venv/
 venv/
 
-# Eval run outputs (large, regenerable)
+# Eval run outputs (large, regenerable) — unanchored: matches runs/ at any depth
 runs/
-vlm_eval/runs/
-strawdi_eval/runs/
 
 # Downloaded dataset (StrawDI_Db1 — re-downloadable, ~139 MB)
-strawdi_eval/data/
+blog_study/strawdi_eval/data/
 
 # Model weights (large binaries)
-weights/
+small_detector/weights/
 *.pt
 
 # Agent scratch dirs — harness creates them, must stay empty
-vlm_eval/agent_cwd/
-strawdi_eval/agent_cwd/
+blog_study/vlm_eval/agent_cwd/
+blog_study/strawdi_eval/agent_cwd/
 
 # Local tool settings
 .claude/settings.local.json
@@ -29,4 +28,4 @@ strawdi_eval/agent_cwd/
 *.swp
 
 # Agent-bridge runtime state (regenerable)
-strawdi_eval/agent_bridge/state/
+blog_study/strawdi_eval/agent_bridge/state/

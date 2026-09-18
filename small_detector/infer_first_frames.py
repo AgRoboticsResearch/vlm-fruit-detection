@@ -18,9 +18,12 @@ CAM = 'observation.images.camera'
 COL = f'videos/{CAM}'
 
 
+HERE = Path(__file__).resolve().parent
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--weights', default='weights/yolov11-m-best.pt')
+    p.add_argument('--weights', default=str(HERE / 'weights' / 'yolov11-m-best.pt'))
     p.add_argument('--dataset', required=True, help='lerobot dataset root')
     p.add_argument('--out', required=True, help='output directory for JPGs')
     p.add_argument('--conf', type=float, default=0.25)

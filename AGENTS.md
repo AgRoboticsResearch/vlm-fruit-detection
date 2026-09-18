@@ -2,17 +2,29 @@
 
 Workspace notes for agents working in this repo.
 
-## VLM raw-capability eval (`vlm_eval/`)
+## Layout
+
+- `blog_study/` — the VLM fruit-detection study behind the blog: all four VLM
+  eval pipelines (`vlm_eval/`, `vlm_eval/seg/`, `vlm_eval/chaos/`,
+  `strawdi_eval/`, `strawdi_eval/seg/`) plus the blog itself (`blogs/`).
+  Everything inside keeps its original relative layout — **run the commands
+  below from `blog_study/`**, not from the repo root.
+- `small_detector/` — the unrelated YOLO inference pipeline
+  (`infer_videos.py`, `infer_first_frames.py`, `weights/`, run logs).
+- `paper_study/` — placeholder for the extended paper version of the blog
+  study (empty for now).
+
+## VLM raw-capability eval (`blog_study/vlm_eval/`)
 
 If your task involves the VLM picking-point eval — running it, extending it,
 changing the prompt styles, adding frames, or reporting its numbers — **read
-[`vlm_eval/AGENTS.md`](vlm_eval/AGENTS.md) first and follow it.** It is a binding
+[`blog_study/vlm_eval/AGENTS.md`](blog_study/vlm_eval/AGENTS.md) first and follow it.** It is a binding
 runbook, not background reading: it records the invariants that separate a valid
 measurement from a believable but worthless one (image delivery depends on a
 catalog override that silently breaks, the model must not be given tools, ground
 truth is recomputed rather than hard-coded).
 
-Short version of the workflow, from this directory:
+Short version of the workflow, from `blog_study/`:
 
 ```bash
 python3 vlm_eval/make_catalog.py                          # after ANY catalog change
@@ -21,7 +33,7 @@ python3 vlm_eval/run_vlm_eval.py --jobs 3 --tag full     # needs escalation + ne
 python3 vlm_eval/verify_run.py vlm_eval/runs/<timestamp>-full   # must print PASS
 ```
 
-## VLM segmentation eval (`vlm_eval/seg/`)
+## VLM segmentation eval (`blog_study/vlm_eval/seg/`)
 
 A second pipeline on the same scenes: the full_detection output standard
 (nine per-fruit fields incl. `picking_point` + `target_index`) plus a tenth,
@@ -35,7 +47,7 @@ polygon-extent IoU vs the rough box. The verifier **fails** any run
 carrying mask-matching
 numbers — they cannot be measured on this data. Scored segmentation lives
 in `strawdi_eval/seg/`. Spec:
-[`vlm_eval/pipeline/full_segmentation.md`](vlm_eval/pipeline/full_segmentation.md);
+[`blog_study/vlm_eval/pipeline/full_segmentation.md`](blog_study/vlm_eval/pipeline/full_segmentation.md);
 lives in `vlm_eval/seg/`, outside the base harness's fingerprint glob, same
 invariants, same provider defaults (`--provider claude` → glm-5.3-flash).
 
@@ -50,7 +62,7 @@ python3 vlm_eval/seg/verify_vlm_seg_run.py vlm_eval/seg/runs/<dir>    # must pri
 python3 vlm_eval/seg/test_seg_scoring.py                              # scorer self-checks
 ```
 
-## Chaos strawberry detection (`vlm_eval/chaos/`)
+## Chaos strawberry detection (`blog_study/vlm_eval/chaos/`)
 
 A fourth pipeline: the **StrawDI segmentation standard** — the
 `strawdi_segmentation` nine-field census (bbox = detection, polygon =
@@ -65,7 +77,7 @@ Imports the
 base provider stack and the vlm_seg polygon scorer unchanged; every record
 carries the three-fingerprint provenance chain (vlm_eval → vlm_seg →
 vlm_chaos). Spec:
-[`vlm_eval/pipeline/chaos_strawberry_detection.md`](vlm_eval/pipeline/chaos_strawberry_detection.md).
+[`blog_study/vlm_eval/pipeline/chaos_strawberry_detection.md`](blog_study/vlm_eval/pipeline/chaos_strawberry_detection.md).
 
 ```bash
 python3 vlm_eval/chaos/build_chaos_manifest.py                        # curate + 720p-normalise frames
@@ -73,13 +85,13 @@ python3 vlm_eval/chaos/run_chaos_eval.py --tag full                   # scenes +
 # no acceptance gate for this pipeline — deliberate (2026-09-17); see the spec's §3
 ```
 
-## StrawDI detection eval (`strawdi_eval/`)
+## StrawDI detection eval (`blog_study/strawdi_eval/`)
 
 The second VLM pipeline: the unbiased inventory output standard narrowed to
 detection (eight per-fruit fields — no picking point, no target nomination
 since v0.2), run on the public StrawDI_Db1 dataset and **scored as
 multi-instance detection** against mask-derived GT boxes. Its spec is
-[`strawdi_eval/pipeline/strawdi_detection.md`](strawdi_eval/pipeline/strawdi_detection.md); it
+[`blog_study/strawdi_eval/pipeline/strawdi_detection.md`](blog_study/strawdi_eval/pipeline/strawdi_detection.md); it
 imports the provider stack, prompt, parser and control from `vlm_eval/`
 unchanged (do not modify `vlm_eval/` for it), and inherits the same
 invariants — control first, tools off, no annotated inputs, ≤1280 px,
@@ -101,7 +113,7 @@ rescale; see the spec's provider section before judging the numbers).
 
 Same rule as above: no detector in the loop — this measures the VLM alone.
 
-## StrawDI segmentation eval (`strawdi_eval/seg/`)
+## StrawDI segmentation eval (`blog_study/strawdi_eval/seg/`)
 
 The third VLM pipeline (v0.1, validated on the full val batch 2026-09-16):
 the detection pipeline's nine-field inventory — the eight detection fields
@@ -109,7 +121,7 @@ plus `polygon`, a vertex outline of each fruit's VISIBLE surface — scored as
 multi-instance **segmentation** against the raw StrawDI GT masks (label
 id-map PNGs, sha256-guarded, read only after the call), with the asked
 bboxes scored by the detection scorer unchanged as a cross-check. Spec:
-[`strawdi_eval/pipeline/strawdi_segmentation.md`](strawdi_eval/pipeline/strawdi_segmentation.md).
+[`blog_study/strawdi_eval/pipeline/strawdi_segmentation.md`](blog_study/strawdi_eval/pipeline/strawdi_segmentation.md).
 Lives in `strawdi_eval/seg/`, deliberately outside the detection harness's
 fingerprint glob; reuses the detection manifest as-is; same invariants.
 
@@ -125,8 +137,15 @@ Same provider set and defaults as the detection eval (`--provider claude`
 scoring needs the label mount in place. Same rule again: no detector in the
 loop.
 
-## Unrelated to the eval
+## Small detector (`small_detector/`)
 
-`infer_videos.py`, `infer_first_frames.py` and `weights/yolov11-m-best.pt` are a
-separate YOLO inference pipeline. Nothing in `vlm_eval/` may import, call or
-otherwise depend on a detector — that is the whole point of the eval.
+`infer_videos.py`, `infer_first_frames.py` and `weights/yolov11-m-best.pt`
+are a separate YOLO inference pipeline (default paths are anchored to the
+script's own directory, so run them from anywhere). Nothing in `blog_study/`
+may import, call or otherwise depend on a detector — that is the whole point
+of the eval.
+
+## Paper study (`paper_study/`)
+
+Reserved for the extended paper version of the blog study. Empty for now —
+add its own spec/AGENTS.md here when work starts.

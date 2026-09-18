@@ -39,11 +39,14 @@ def ffmpeg_frames(path, size):
     proc.wait()
 
 
+HERE = Path(__file__).resolve().parent
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--weights', default='weights/yolov11-m-best.pt')
+    p.add_argument('--weights', default=str(HERE / 'weights' / 'yolov11-m-best.pt'))
     p.add_argument('--source', required=True, help='directory containing videos')
-    p.add_argument('--out', default='runs/inference', help='output directory')
+    p.add_argument('--out', default=str(HERE / 'runs' / 'inference'), help='output directory')
     p.add_argument('--conf', type=float, default=0.25)
     p.add_argument('--device', default='0')
     args = p.parse_args()
