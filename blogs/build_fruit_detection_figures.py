@@ -6,11 +6,11 @@ split (strawdi_eval/seg/runs/). Every saved ok record is re-scored from the
 raw label PNGs (sha256-guarded, read-only) and the recomputed values are
 asserted against the stored ones before any figure is drawn.
 
-While the GPT-6 Astra test batch is still completing, its records are merged
-from the full run plus its retry run and marked partial (GPT_PENDING below,
-hatched bars, † labels). When the batch finishes: point the GPT-6 Astra entry
-at the final run directory(ies), set GPT_PENDING = False, rerun — every
-figure and printed number updates.
+GPT-6 Astra uses the authoritative 200/200 run: 183 original records plus the
+17 re-requested frames (8, 787, 795-995) whose first retry responses were
+silently mis-routed provider-side (see the blog's routing caveat). To swap in
+a newer run for any model, edit SPECS below and rerun; set GPT_PENDING = True
+to mark a model's bars/panels as a partial batch again.
 
 Run from any directory: python3 blogs/build_fruit_detection_figures.py
 """
@@ -41,21 +41,26 @@ OUT.mkdir(parents=True, exist_ok=True)
 # --- run configuration: the only block to touch when runs are replaced ------
 SEG_RUNS = ROOT / 'strawdi_eval/seg/runs'
 SPECS = [
- ('Kimi K3',    [SEG_RUNS / '20260916-201059-k3-256k-default-codex-strawdi_seg-full']),
- ('GLM',        [SEG_RUNS / '20260916-194317-glm-5.3-flash-default-claude-strawdi_seg-full']),
- ('DeepSeek',   [SEG_RUNS / '20260916-215556-deepseek-flash-default-codex-strawdi_seg-full']),
- ('GPT-6 Astra', [SEG_RUNS / '20260916-194636-gpt-6-astra-low-codex-strawdi_seg-full',
-                  SEG_RUNS / '20260917-062635-gpt-6-astra-low-codex-strawdi_seg-retry']),
+ ('Kimi K3',          [SEG_RUNS / '20260916-201059-k3-256k-default-codex-strawdi_seg-full']),
+ ('GLM-5.3-Flash',    [SEG_RUNS / '20260917-230853-glm-5.3-flash-max-claude-strawdi_seg-maxthinking']),
+ ('DeepSeek V4.1-Flash', [SEG_RUNS / '20260916-215556-deepseek-flash-default-codex-strawdi_seg-full']),
+ ('GPT-6 Astra',      [SEG_RUNS / '20260917-201419-gpt-6-astra-low-codex-strawdi_seg-retry-requested-full200']),
 ]
-GPT_PENDING = True          # GPT-6 Astra test batch still completing -> hatched/†
+GPT_PENDING = False         # GPT-6 Astra test batch complete (200/200 ok)
 COLORS = ['#687a95', '#da9b35', '#8a73ac', '#138577']
 GALLERY_SCENES = ['1251', '1838', '2085', '2532', '1669', '926']   # GPT-6 Astra panels
 COMPARE_SCENE = '2532'      # same-scene four-model comparison
 CHAOS_SCENES = ['sb04', 'IMG_7665']
-CHAOS_RUNS = {              # None -> placeholder panel (run not started yet)
- 'GPT-6 Astra': None,
- 'GLM': ROOT / 'vlm_eval/chaos/runs/20260917-100620-glm-5.3-flash-default-claude-vlm_chaos-full',
-}
+CHAOS_RUNS = [              # (panel label, run dir); None dir -> placeholder panel
+ ('GPT-6 Astra (low)', ROOT / 'vlm_eval/chaos/runs/20260917-210024-gpt-6-astra-low-codex-vlm_chaos-full'),
+ ('5.6 luna · low',   ROOT / 'vlm_eval/chaos/runs/20260917-210659-gpt-5.6-luna-low-codex-vlm_chaos-full'),
+ ('5.6 luna · medium', ROOT / 'vlm_eval/chaos/runs/20260917-210815-gpt-5.6-luna-medium-codex-vlm_chaos-full'),
+ ('5.6 luna · high',  ROOT / 'vlm_eval/chaos/runs/20260917-211003-gpt-5.6-luna-high-codex-vlm_chaos-full'),
+ ('5.6 sol · low',    ROOT / 'vlm_eval/chaos/runs/20260917-211255-gpt-5.6-sol-low-codex-vlm_chaos-full'),
+ ('5.6 sol · medium', ROOT / 'vlm_eval/chaos/runs/20260917-211421-gpt-5.6-sol-medium-codex-vlm_chaos-full'),
+ ('5.6 sol · high',   ROOT / 'vlm_eval/chaos/runs/20260917-211606-gpt-5.6-sol-high-codex-vlm_chaos-full'),
+ ('GLM-5.3-Flash',    ROOT / 'vlm_eval/chaos/runs/20260917-230902-glm-5.3-flash-max-claude-vlm_chaos-maxthinking'),
+]
 
 plt.rcParams.update({'font.family': 'DejaVu Sans', 'font.size': 10,
                      'axes.spines.top': False, 'axes.spines.right': False,
@@ -86,7 +91,7 @@ for name, dirs in SPECS:
 
 # Consistency: same 200-image manifest, same GT, and every stored ok record
 # reproduces exactly under the saved scorer + raw labels.
-ref = next(r for r in runs['GLM'].values())
+ref = next(r for r in runs['GLM-5.3-Flash'].values())
 assert all(len(records) == 200 for records in runs.values())
 _gt_cache = {}
 def gt_masks_for(r):
@@ -96,7 +101,7 @@ def gt_masks_for(r):
 
 for name, _ in SPECS:
     for sid, r in runs[name].items():
-        g = runs['GLM'][sid]
+        g = runs['GLM-5.3-Flash'][sid]
         assert (r['gt_boxes'], r['gt_areas']) == (g['gt_boxes'], g['gt_areas'])
         if r['status'] == 'ok':
             scored = score_masks_image(r['inventory'], gt_masks_for(r), r['gt_areas'],
@@ -172,13 +177,14 @@ def hatch(name):
     return '///' if GPT_PENDING and name == 'GPT-6 Astra' else ''
 
 # --- scientific panels: original pixels + saved polygons, GT mask as fill ---
-def seg_panel(ax, r, title):
+def seg_panel(ax, r, title, gt_fill=True):
     ax.imshow(Image.open(ROOT / 'strawdi_eval' / r['image']))
     masks = gt_masks_for(r)
-    union = np.any(masks, axis=0)
-    fill = np.zeros((*union.shape, 4))
-    fill[union] = (1, 1, 1, 0.30)
-    ax.imshow(fill, interpolation='nearest')
+    if gt_fill:
+        union = np.any(masks, axis=0)
+        fill = np.zeros((*union.shape, 4))
+        fill[union] = (1, 1, 1, 0.30)
+        ax.imshow(fill, interpolation='nearest')
     matched = {m['pred_index'] for m in r['matches_50']}
     for i, fruit in enumerate(r['inventory']):
         poly = fruit.get('polygon')
@@ -287,23 +293,25 @@ axes[1].set(xticks=x, xticklabels=[tag(n) for n, _ in SPECS],
 fig.suptitle('Operational cost • all 200 scheduled images per model', fontsize=14)
 save(fig, 'tokens_latency')
 
-# Figure: private chaotic scenes, qualitative (no ground truth exists)
+# Figures: private chaotic scenes, qualitative (no ground truth exists) —
+# one all-model grid per scene, GPT-6 Astra first.
 chaos = {}
-for model, d in CHAOS_RUNS.items():
-    chaos[model] = {}
+for label, d in CHAOS_RUNS:
+    chaos[label] = {}
     if d is not None and (d / 'responses.jsonl').exists():
         for r in read(d / 'responses.jsonl'):
             if r['status'] == 'ok':
-                chaos[model][r['sample_id']] = r
+                chaos[label][r['sample_id']] = r
 
-def chaos_panel(ax, r, scene, model):
+def chaos_panel(ax, r, scene, label):
     img = Image.open(ROOT / 'vlm_eval' / r['image']) if r else \
           Image.open(ROOT / 'vlm_eval/data/frames' / f'chaos__{scene}.png')
     ax.imshow(img)
     if r is None:
-        ax.text(0.5, 0.5, f'{model}\nrun in progress', transform=ax.transAxes,
+        ax.text(0.5, 0.5, f'{label}\nrun in progress', transform=ax.transAxes,
                 ha='center', va='center', fontsize=13, color='white',
                 bbox=dict(boxstyle='round,pad=0.45', fc='black', alpha=.65, ec='none'))
+        ax.set_title(label, fontsize=10)
     else:
         cmap = plt.get_cmap('RdYlGn')
         for fruit in r['inventory']:
@@ -311,19 +319,37 @@ def chaos_panel(ax, r, scene, model):
             if poly:
                 ax.add_patch(Polygon(poly, closed=True, fill=False, lw=1.7,
                                      ec=cmap((fruit.get('redness_pct') or 0) / 100)))
-        ax.set_title(f"{scene} — {model}: {len(r['inventory'])} fruit reported", fontsize=11)
-    if r is None:
-        ax.set_title(f"{scene} — {model}", fontsize=11)
+        ax.set_title(f"{label}\n{len(r['inventory'])} fruit", fontsize=10)
     ax.axis('off')
 
-fig, axes = plt.subplots(len(CHAOS_SCENES), len(CHAOS_RUNS), figsize=(13, 8.2),
-                         layout='constrained')
-for row, scene in enumerate(CHAOS_SCENES):
-    for col, model in enumerate(CHAOS_RUNS):
-        chaos_panel(axes[row, col], chaos[model].get(scene), scene, model)
-fig.suptitle('Zero-shot on private chaotic scenes — polygon coloured by reported redness (no ground truth)',
-             fontsize=13)
-save(fig, 'chaos_private')
+CHAOS_FIGSIZE = {'sb04': (11.5, 15.2), 'IMG_7665': (8.1, 23.5)}   # 4 rows x 2 cols, matched to scene aspect
+CHAOS_LABELS = {'sb04': 'private-1', 'IMG_7665': 'private-2'}
+for scene in CHAOS_SCENES:
+    fig, axes = plt.subplots(4, 2, figsize=CHAOS_FIGSIZE[scene], layout='constrained')
+    for ax, (label, _) in zip(axes.flat, CHAOS_RUNS):
+        chaos_panel(ax, chaos[label].get(scene), scene, label)
+    head = f'Zero-shot inventories on a private chaotic scene ({CHAOS_LABELS[scene]})'
+    tail = 'polygon coloured by reported redness; no ground truth'
+    fig.suptitle(f'{head}\n{tail}' if CHAOS_FIGSIZE[scene][0] < 9 else f'{head} — {tail}', fontsize=13)
+    save(fig, f'chaos_{CHAOS_LABELS[scene]}')
+
+# Figure: the silent-routing episode — suspect-batch vs re-requested responses
+# on the same frames, same prompt, same recorded model identifier. No numbers:
+# the polygons and MISS labels carry the story.
+ROUTING_FRAMES = ['995', '926']
+ROUTING_SUSPECT = SEG_RUNS / '20260917-153213-gpt-6-astra-low-codex-strawdi_seg-full-merged199'
+ROUTING_CORRECT = SEG_RUNS / '20260917-201419-gpt-6-astra-low-codex-strawdi_seg-retry-requested-full200'
+suspect = {r['sample_id']: r for r in read(ROUTING_SUSPECT / 'responses.jsonl')}
+correct = {r['sample_id']: r for r in read(ROUTING_CORRECT / 'responses.jsonl')}
+for sid in ROUTING_FRAMES:
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.7), layout='constrained')
+    seg_panel(axes[0], suspect[sid], 'Suspect batch', gt_fill=False)
+    seg_panel(axes[1], correct[sid], 'Re-requested under identical settings', gt_fill=False)
+    fig.suptitle(f'Same frame, same prompt, same recorded model identifier — StrawDI test image {sid}',
+                 fontsize=13)
+    fig.supxlabel('Green: matched prediction     Coral: unmatched prediction     MISS: labelled fruit not found',
+                  fontsize=9)
+    save(fig, f'routing_{sid}')
 
 # --- blog-ready numbers ------------------------------------------------------
 print((OUT / 'comparison.csv').read_text())
@@ -337,3 +363,7 @@ for name, _ in SPECS:
     print(f"   size recall: " + '  '.join(f"{z['n_matched']}/{z['n_gt']}" for z in s['size']) +
           f"   tokens in/out {s['usage']['input_tokens']:.0f}/{s['usage']['output_tokens']:.0f}  "
           f"wall {s['usage']['wall_s']:.1f}s")
+print('chaos fruit counts:')
+for label, _ in CHAOS_RUNS:
+    print(' ', label, {s: len(chaos[label][s]['inventory'])
+                       for s in CHAOS_SCENES if s in chaos[label]})

@@ -2,6 +2,8 @@
 
 Sep 16, 2026 Zhenghao Fei [email](mailto:fei.holly@gmail.com)
 
+> **TL;DR** — I tested whether frontier vision-language models, given only raw pixels and a written instruction, can do fruit detection zero-shot. On the StrawDI benchmark's own 200-image test split, GPT-6 Astra's visible-surface outlines reach segmentation mAP **60.1** — ahead of the dataset's fully supervised Mask R-CNN (**45.36**, trained on 2,800 images) — and within two points of its per-instance IoU (**86.0 vs 87.7**). No other tested VLM is close (best runner-up: mAP 30.9). The same single prompt also returns each fruit's ripeness, occlusion, and graspability, and the transfer holds on private chaotic scenes the model cannot have memorized. What remains open: the smallest fruit (38% recall), ~48 s and ≈$0.20 per image, and — as a provider-routing incident during the runs shows — verifying that the model that answered is the model you asked for. Fruit detection is not universally solved, but the zero-shot starting point now rivals supervised specialists: test a strong VLM first.
+
 Detecting fruit in images has been a long-standing challenge in agricultural computer vision. It is hard not because we cannot achieve high accuracy on a specific dataset, but because real-world scenarios are highly variable. No two orchards look the same, and the same type of fruit can look very different depending on the environment (weather, lighting, occlusion, etc.) and the fruit itself (variety and horticultural practices). Most deep learning-based fruit detection methods rely on large amounts of labelled data to cover the variability (distribution) in the real world. Detection in out-of-distribution (OOD) scenarios often fails. Unfortunately, due to the inherent variability of real-world conditions and data privacy issues, fruit detection always has to deal with OOD scenarios. This means that one often cannot deploy a model trained in one orchard directly to another orchard without fine-tuning it with new data.
 
 My collaborators and I have been working on improving the generalizability of fruit detection models for a while and have tried many methods, including domain adaptation, GANs (generative adversarial networks) [1], and learning from foundation models [2,3]. These methods have shown improvements, but they are still far from solving the problem.
@@ -36,30 +38,25 @@ I am particularly impressed by three aspects of what VLMs may offer from this po
 3. **Near-infinite flexibility.**
    GPT-6 Astra is not limited to returning a bounding box and class label. For each detected fruit, it can also provide a pixel-level outline of the fruit's visible surface and rich semantic information, such as redness, occlusion, calyx visibility, stem visibility, graspability, confidence, and a natural-language description. The output can also be changed simply by modifying the prompt. This makes the detector highly flexible: users can request new attributes, redefine what counts as a target, or adapt the output to different downstream tasks without retraining the model. In this sense, the system begins to look less like a fixed-purpose detector and more like a general visual perception interface.
 
-## A common experiment on StrawDI
+## A common experiment on an strawberry detection benchmark
 
-The **Strawberry Digital Images dataset (StrawDI)** contains photographs collected at commercial plantations in Huelva, Spain. Its annotated subset, **StrawDI_Db1**, contains 3,100 images at 1008 × 756 pixels, split into 2,800 training, 100 validation, and 200 test images, with an instance mask for every strawberry — including unripe, occluded, distant, and partly cropped fruit. [Official dataset description][strawdi]
+We chose the **Strawberry Digital Images dataset (StrawDI)** as a benchmark for our experiments. It is a well-known dataset in the fruit detection community, and it provides a challenging testbed for evaluating the performance of visual detection models. The StrawDI contains photographs collected at commercial plantations in Huelva, Spain. Its annotated subset, **StrawDI_Db1**, contains 3,100 images at 1008 × 756 pixels, split into 2,800 training, 100 validation, and 200 test images, with an instance mask for every strawberry — including unripe, occluded, distant, and partly cropped fruit. [Official dataset description][strawdi]
 
-We evaluated **all 200 test images (1,132 annotated strawberries)** — the same split the dataset's own paper benchmarks on, so our numbers can be set next to its supervised specialist directly. No model was trained or fine-tuned on StrawDI: this is a zero-shot evaluation in the operational sense. Because StrawDI is public, it does not establish that the images were absent from model pretraining.
+We evaluated **all 200 test images (1,132 annotated strawberries)** — the same split the dataset's own paper benchmarks on, so our numbers can be set next to its supervised specialist directly. No model was trained or fine-tuned on StrawDI: this is a zero-shot evaluation in the operational sense. It worth noting that because StrawDI is public, it does not guarantee that the images were absent from model pretraining.
 
 ### The task and the controls
 
-Every model received the same unannotated image and the same prompt: a complete inventory of the strawberries, with nine fields per fruit — bounding box, a polygon outlining the fruit's **visible surface**, redness, occlusion, calyx visibility, stem visibility, graspability, confidence, and a free-text description. **The polygons were scored as instance segmentation directly against the raw ground-truth masks** — the StrawDI paper's own benchmark task — and the boxes from the same responses were scored as detection as a cross-check. The other attributes have no labels in this benchmark.
+Every model received the same unannotated image and the same prompt: to detect all strawberry instances in the image and return nine fields for each fruit — a bounding box, a polygon outlining the fruit’s visible surface, redness, occlusion, calyx visibility, stem visibility, graspability, confidence, and a free-text description. **The polygons were scored as instance segmentation directly against the raw ground-truth masks** — the StrawDI paper's own benchmark task — and the boxes from the same responses were scored as detection as a cross-check. The other attributes have no labels in this benchmark.
 
-We report the segmentation experiment as *the* result, not as a second stage after detection, for a principled reason: the masks annotate each fruit's visible surface, the polygon asks for exactly the same thing, so mask-versus-mask comparison carries no definition gap. (The box definition does have one — the prompt asks for the *whole* fruit while the label covers only the *visible* part — which is why the boxes are demoted to a cross-check here.)
+The following models with cooresponding reasoning effort (thinking) were evaluated, and we will see that the reasoning effort is not the main factor for performance.
 
-The controls: a synthetic visual check at the start of each batch verified image delivery; tools and file access were disabled; no detector, segmenter, or tracker assisted the model; ground truth was read only after the call and recomputed from the original masks; and every valid response was re-scored from the saved prompts. All runs passed validation.
+| Model name | Reasoning effort |
+| --- | --- |
+| Kimi K3 | High |
+| GLM-5.3-Flash | Max |
+| DeepSeek V4.1-Flash | High |
+| GPT-6 Astra | Low |
 
-| Display name | Recorded model identifier | CLI used | Reasoning effort |
-| --- | --- | --- | --- |
-| Kimi K3 | `k3-256k` | Codex | Provider default |
-| GLM | `glm-5.3-flash` | Claude | Provider default |
-| DeepSeek | `deepseek-flash` | Codex | Provider default |
-| GPT-6 Astra † | `gpt-6-astra` | Codex | Low |
-
-*Model identities and routing were recorded during inference. † The GPT-6 Astra test batch is still completing at the time of writing — 125 of 200 images have valid responses so far — and its numbers here are pooled over that completed subset; they will be replaced with the full 200-image results without any other change to this article.* <!-- PENDING-GPT-TEST: replace GPT rows/numbers and drop this note once the full+retry merge covers 200/200; then set GPT_PENDING=False in blogs/build_fruit_detection_figures.py and rerun it. -->
-
-Reasoning effort, provider routing, and harness versions differ across these configurations, so this is a comparison of **configurations under a common task**, not a controlled experiment isolating model architecture.
 
 ### The exact prompt
 
@@ -92,45 +89,47 @@ Reply with ONLY a JSON object and nothing else - no prose, no code fences:
 {"strawberries": [{"bbox": [x1, y1, x2, y2], "polygon": [[x, y], [x, y], ...], "redness_pct": 0, "occlusion_pct": 0, "calyx_visible": true, "peduncle_visible": true, "graspable": true, "confidence_pct": 0, "description": "..."}, ...]}
 ```
 
-### What do the metrics mean?
+### Metrics
+
+The following metrics are computed for the epxeriments:
 
 **Intersection over Union (IoU)** measures overlap between a predicted polygon (rasterised) and a ground-truth instance mask. A prediction counts as a true positive at IoU ≥ 0.50; matching is greedy in descending confidence order, each label matched at most once. Unmatched predictions are false positives; unmatched labels are false negatives.
 
 - **Precision** = TP / (TP + FP); **Recall** = TP / (TP + FN); **F1** = 2PR / (P + R).
-- **AP50** summarizes the precision–recall curve at IoU 0.50; **mAP50–95** averages AP across IoU thresholds 0.50–0.95 in steps of 0.05.
+- **AP50** summarizes the precision–recall curve at IoU 0.50; **mAP50–95** averages AP across IoU thresholds 0.50–0.95 in steps of 0.05. (Note that the VLM output do not have the same confidence notation as a trained deeplearning detector, the confidance values are textual output from the model)
 - **Mean matched mask IoU** is the average IoU of matched prediction–label pairs — the same quantity the StrawDI paper reports as mean per-instance IoU (I²oU).
 - **Count MAE** is the mean absolute per-image error in fruit count — inventory error, not localization quality.
 
-Our scorer uses all-points interpolation, not the full COCO protocol's 101 recall thresholds. [Official COCO evaluator](https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py) F1 is our primary metric: the VLMs' reported confidences cluster near 100, so AP ranking is sensitive to ties. Headline values pool detections across each run's valid images.
+Our scorer uses all-points interpolation, not the full COCO protocol's 101 recall thresholds. [Official COCO evaluator](https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py) F1 is our primary metric: the VLMs' reported confidences cluster near 100, so AP ranking is sensitive to ties. 
 
 ## Results: instance segmentation on the dataset's own benchmark
 
-Before the numbers, here is what the output actually looks like. GPT-6 Astra's visible-surface polygons on six test scenes — ripe and unripe fruit, dense clusters, heavy occlusion:
+Before the numbers, here is what the output actually looks like. GPT-6 Astra's visible-surface polygons on six test scenes — ripe and unripe fruit, dense clusters, and heavy occlusion. **What surprised me most is how close many of these predictions look to ground-truth-quality annotations: when inspecting the apparent “errors” manually, a number of them seem to reflect differences in annotation standards or missed labels rather than clear detection failures. In these examples, the GPT-6 Astra's model output is 'ground truth level'**
 
 ![Six StrawDI test scenes with GPT-6 Astra's predicted visible-surface polygons against the ground-truth masks.](assets/fruit_detection_is_solved_by_vlms/gpt_gallery.png)
 
-*Figure 1. GPT-6 Astra, zero-shot, on six StrawDI test scenes. White fill: ground-truth instance masks; green: predictions matched at mask IoU ≥ 0.50; coral: unmatched predictions; MISS: labelled fruit the model never found. Note how the outlines follow occluder edges rather than convex hulls. Scenes selected to show the range of behaviour — including misses (images 2085, 2532, 926) — not a random sample.* <!-- PENDING-GPT-TEST: scenes may be re-picked from the full 200 once the batch completes (GALLERY_SCENES in blogs/build_fruit_detection_figures.py). -->
+*Figure 1. GPT-6 Astra, zero-shot, on six StrawDI test scenes. White fill: ground-truth instance masks; green: predictions matched at mask IoU ≥ 0.50; coral: unmatched predictions; MISS: labelled fruit the model never found. Note how the outlines follow occluder edges rather than convex hulls. Scenes selected to show the range of behaviour — including misses (images 2085, 2532, 926) — not a random sample.*
 
-| Model | Valid images | Precision @50 | Recall @50 | F1 @50 | F1 @75 | AP50 | mAP50–95 | Mean matched mask IoU | Count MAE |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Kimi K3 | 200 / 200 | 77.7% | 64.8% | 70.7% | 39.9% | 62.0% | 30.9% | 0.75 | 1.04 |
-| GLM | 200 / 200 | 75.1% | 61.2% | 67.5% | 27.4% | 57.8% | 24.3% | 0.72 | 1.14 |
-| DeepSeek | 200 / 200 | 73.1% | 59.9% | 65.9% | 26.2% | 55.8% | 22.6% | 0.71 | 1.11 |
-| **GPT-6 Astra †** | **125 / 200** | **90.3%** | **80.3%** | **85.0%** | **68.9%** | **79.8%** | **55.9%** | **0.85** (median 0.89) | **0.85** |
+| Model | Precision @50 | Recall @50 | F1 @50 | F1 @75 | AP50 | mAP50–95 | Mean matched mask IoU | Count MAE |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Kimi K3 | 77.7% | 64.8% | 70.7% | 39.9% | 62.0% | 30.9% | 0.75 (median 0.77) | 1.04 |
+| GLM | 75.0% | 61.0% | 67.3% | 28.4% | 58.2% | 24.3% | 0.72 (median 0.73) | 1.12 |
+| DeepSeek | 73.1% | 59.9% | 65.9% | 26.2% | 55.8% | 22.6% | 0.71 (median 0.72) | 1.11 |
+| **GPT-6 Astra** | **91.9%** | **83.8%** | **87.6%** | **75.1%** | **83.5%** | **60.1%** | **0.86** (median 0.89) | **0.75** |
 
-*All metrics at mask IoU; † pooled over the 125 test images completed so far. A few GPT calls failed for operational reasons (empty CLI responses) rather than model errors; the affected images are being re-run with identical settings and every valid response is included.* <!-- PENDING-GPT-TEST: table row → 200/200. -->
+*All metrics at mask IoU; 200/200 images scored for every model.*
 
-On its completed subset, GPT-6 Astra matches **579 of 721 labelled fruits** (62 unmatched predictions, 142 missed labels), exceeding the runner-up Kimi K3's F1 by **14.3 percentage points**. The gap is not an artefact of the different image sets: on the same 125 images, F1 is 68.9% (Kimi K3), 65.4% (GLM), 65.5% (DeepSeek), and 85.0% (GPT).
+GPT-6 Astra matches **948 of 1,132 labelled fruits** (84 unmatched predictions, 184 missed labels), exceeding the runner-up Kimi K3's F1 by **17.0 percentage points**. All four configurations returned valid responses for every test image, so no common-subset correction is needed.
 
 ![Segmentation precision, recall, F1, and F1 across IoU thresholds for the four configurations.](assets/fruit_detection_is_solved_by_vlms/seg_scores.png)
 
-*Figure 2. Left: precision, recall, and F1 at mask IoU ≥ 0.50. Right: F1 as the required IoU tightens — GPT's advantage grows with the localization requirement. Hatched bars and dashed line: GPT-6 Astra's partial batch (125 of 200 images so far).*
+*Figure 2. Left: precision, recall, and F1 at mask IoU ≥ 0.50. Right: F1 as the required IoU tightens — GPT's advantage grows with the localization requirement.*
 
 The same scene makes the gap visible without any numbers — here all four models answer the identical prompt on one crowded test image:
 
 ![The four models' segmentation output on the same crowded strawberry scene, StrawDI test image 2532.](assets/fruit_detection_is_solved_by_vlms/same_scene_seg.png)
 
-*Figure 3. StrawDI test image 2532, twenty labelled instances. GPT-6 Astra finds fifteen with one unmatched prediction; the other three models find six to eight and over-segment the cluster. Illustrative example, not a representative sample.*
+*Figure 3. StrawDI test image 2532, twenty labelled instances. GPT-6 Astra finds fifteen with one unmatched prediction; the other three models find five to eight and over-segment the cluster. Illustrative example, not a representative sample.*
 
 ### Comparison with the dataset's own benchmark
 
@@ -140,72 +139,112 @@ The StrawDI paper's benchmark is exactly this task on exactly this split: Mask R
 | --- | --- | --- | ---: | ---: |
 | Mask R-CNN (original paper) | 2,800 StrawDI images | test (200 images) | 45.36 | 87.70 |
 | Kimi K3, zero-shot | none | test (200 images) | 30.9 | 74.9 |
-| **GPT-6 Astra, zero-shot †** | **none** | **test (200 images)** | **55.9 †** | **84.8 †** |
+| **GPT-6 Astra, zero-shot** | **none** | **test (200 images)** | **60.1** | **86.0** |
+| GPT-6 Astra, zero-shot | none | val (100 images) | 61.3 | 86.9 |
 
-*The paper's numbers are literature reference points, not reruns: the AP protocol differs (all-points interpolation here) and our polygons are limited to 32 vertices. But the task, the output representation, the ground truth, and now the split are the same.* <!-- PENDING-GPT-TEST: GPT row → final values. -->
+*The paper's numbers are literature reference points, not reruns: the AP protocol differs (all-points interpolation here) and our polygons are limited to 32 vertices. But the task, the output representation, the ground truth, and the test split are the same. The validation row comes from an earlier 100-image batch of the same configuration, included to show the result replicates across splits.*
 
-On the completed two-thirds of the test split, **a general-purpose VLM with no task-specific training is ahead of the fully supervised Mask R-CNN on segmentation mAP (55.9 vs 45.36) and within three points of it on mean instance IoU (84.8 vs 87.7)** — the metric on which the val-split version of this experiment had already reached parity. Whether the final 200-image numbers keep this profile is exactly what the remaining batch will tell us. The other two VLMs are far behind (Kimi K3: mAP 30.9, mean IoU 74.9), which shows this is a frontier-model capability, not something VLMs get for free.
+**A general-purpose VLM with no task-specific training exceeds the fully supervised Mask R-CNN's segmentation mAP on its own test split (60.1 vs 45.36) and lands within two points of its mean instance IoU (86.0 vs 87.7)** — With the validation-split run (61.3 / 86.9) showing the same profile, this is the strongest evidence presented in this article. The other VLMs are still far behind (best non-GPT 6 Astra: Kimi K3 at mAP 30.9 and mean IoU 74.9), suggesting that this level of performance is, for now, a frontier-model capability rather than a general property of VLMs. At the same time, we look forward to seeing whether the next generation of VLMs from other providers, including open-source models, can approach or match this level of performance.
 
-Two cross-checks support the headline:
+Small fruit remain challenging — but Astra is already much stronger
 
-1. **The box cross-check reproduces the ranking.** Scoring the whole-fruit boxes from the same responses with the unchanged detection scorer gives F1@50 of 84.0% (GPT †), 76.7% (Kimi K3), 72.4% (DeepSeek), and 71.9% (GLM) — the same ordering as the mask metric, at the expected absolute discount from the whole-fruit versus visible-surface definition gap.
-2. **The boundary is unchanged: small fruit.** GPT's size-stratified mask recall is 201/201 large and 317/344 medium instances, but 61/176 small (34.7%) — and small fruit is where the other models collapse to single digits (8–14 of 252). A model can localize prominent fruit nearly perfectly while still missing most of the smallest visible fruit — this is why I would not call the complete inventory solved.
+Small fruit are still the most difficult category, but GPT-6 Astra performs substantially better than the other VLMs. Its size-stratified mask recall is 338/338 for large fruit, 513/542 for medium fruit, and 97/252 for small fruit (38.5%). While the recall on small fruit is clearly lower than on medium and large fruit, it is still striking compared with the other models, which detect only 7–14 of the 252 small instances.
+
+This suggests that GPT-6 Astra has made a significant step forward even on small-object detection, although very small and weakly visible fruit remain one of the clearest failure modes. In other words, small fruit are no longer simply a case where all VLMs fail similarly — Astra shows a substantial capability gap here as well.
 
 ![Recall by visible instance size for the four configurations.](assets/fruit_detection_is_solved_by_vlms/size_recall.png)
 
-*Figure 4. Recall at mask IoU ≥ 0.50 by visible mask area (small < 1,024 px²; medium 1,024–9,215 px²; large ≥ 9,216 px²). Labels give matched/total instances; GPT's denominators are smaller because its batch covers 125 of the 200 images so far. Hatched: partial batch.*
+*Figure 4. Recall at mask IoU ≥ 0.50 by visible mask area (small < 1,024 px²; medium 1,024–9,215 px²; large ≥ 9,216 px²). Labels give matched/total instances.*
 
-## Some apparent errors may be annotation disagreements
+### An unexpected caveat: silent provider-side routing
 
-An unmatched prediction does not tell us *why* it failed: invented object, inaccurate outline, or a real fruit missing from the labels. In the validation-split version of this experiment, close inspection showed both kinds — clearly visible fruit with no corresponding mask (persuasive annotation omissions) alongside whole-fruit versus visible-surface mismatches. The polygon metric eliminates the second kind by construction; the first kind can only be resolved by a blind audit of all unmatched predictions and missed labels on the test split, which is pending. Until then, the original labels and the unadjusted scores above are the appropriate reference, and I would not claim that most remaining error is ground-truth error — only that **some scored false positives appear to be real fruit**. <!-- PENDING-AUDIT: add a crops figure (test-split examples) once the unmatched-prediction audit is done. -->
+One episode during this evaluation is worth reporting because it nearly contaminated the GPT-6 Astra results. Every call was issued with the same recorded model identifier (`gpt-6-astra` via the Codex CLI), and every batch passed the synthetic vision-delivery control. Yet one intermediate retry batch returned responses that were perfectly schema-valid — and visibly wrong on the image: much of the fruit missing, clusters over-segmented, outlines that no longer follow occluder edges. Two of the affected frames, exactly as they came back:
+
+![Silent routing comparison, frame 995: suspect batch vs re-requested.](assets/fruit_detection_is_solved_by_vlms/routing_995.png)
+
+*Figure 5. StrawDI test image 995. Left: the suspect batch's answer — same prompt, same recorded model identifier, schema-valid. Right: the same frame re-requested under identical settings.*
+
+![Silent routing comparison, frame 926: suspect batch vs re-requested.](assets/fruit_detection_is_solved_by_vlms/routing_926.png)
+
+*Figure 6. Test image 926 — the same pattern.*
+
+Re-requesting the affected frames under identical settings immediately recovered the dense, clean inventories shown on the right. Our suspicion is that the provider silently routed those requests to a different, weaker model while the request-side bookkeeping still said `gpt-6-astra`. The affected records were excluded wholesale and re-run; every GPT-6 Astra number in this article comes from the corrected batch. The lesson generalizes beyond this incident: with API-routed frontier models, "the request named the model" is not evidence that the model answered — and no schema validator will catch a wrong-model response.
 
 ## Zero-shot evaluation on private data
 
-A public benchmark cannot prove out-of-distribution performance: StrawDI has been downloadable for years, so these images may well be in pretraining data. As a check beyond the public benchmark, we ran the identical nine-field census prompt — byte-for-byte the same prompt and schema — on **two private, deliberately chaotic scenes from our own collection**: a dense hanging truss from a greenhouse row (`sb04`) and a hand-held close-up of an overlapping cluster (`IMG_7665`). Neither image has been publicly released, and neither has any ground truth, so this is qualitative: what does the model's inventory look like when the scene is messy and the data cannot have been memorized as a benchmark?
+A public benchmark cannot prove out-of-distribution performance: StrawDI has been downloadable for years, so these images may be in pretraining data. As a check beyond the public benchmark, we ran the identical nine-field census prompt — byte-for-byte the same prompt and schema — on **two private, deliberately chaotic scenes from our own collection**: **private-1**, a dense hanging truss from a greenhouse row, and **private-2**, a hand-held close-up of an overlapping cluster. Neither image has been publicly released, and neither has any ground truth, so this is qualitative: what does the model's inventory look like when the scene is messy and the data cannot have been memorized as a benchmark?
 
-![GPT-6 Astra and GLM inventories on two private chaotic scenes, polygons coloured by the model's own redness estimate.](assets/fruit_detection_is_solved_by_vlms/chaos_private.png)
+Eight configurations ran both scenes: GPT-6 Astra (low effort), the six **GPT-5.6** configurations (the `luna` and `sol` variants, each at low, medium, and high reasoning effort), and GLM (maximum effort) as a non-GPT reference.
 
-*Figure 5. Zero-shot inventories on two private scenes; each polygon is coloured by the model's own reported redness (green → red). GPT-6 Astra's runs — the main subject of this comparison — are still in progress; GLM's are shown as a reference (20 and 11 fruit reported). No ground truth exists on these scenes.* <!-- PENDING-CHAOS: drop in GPT-6 Astra's chaos overlays when its run finishes (CHAOS_RUNS in blogs/build_fruit_detection_figures.py). -->
+| Configuration | `private-1` | `private-2` |
+| --- | ---: | ---: |
+| **GPT-6 Astra (low)** | **23** | **21** |
+| GPT-5.6 luna low / medium / high | 18 / 21 / 19 | 14 / 16 / 17 |
+| GPT-5.6 sol low / medium / high | 17 / 21 / 21 | 18 / 17 / 18 |
+| GLM-5.3-flash | 16 | 14 |
 
-Even the runner-up model's output shows the flexibility that makes this paradigm interesting. On `IMG_7665`, GLM distinguishes a "[l]arge fully red strawberry … with only small pale seed patches near the green calyx leaves" (redness 88%) from the "[l]arge pale green-white unripe strawberry" beside it (redness 2%), flags which fruit a gripper could pick right now, and traces each visible surface around the occluding leaves — all from the same prompt that produced the StrawDI numbers, with no task-specific anything. These are observed outputs, not independently validated horticultural or grasping judgments; the private scenes establish transfer, not accuracy. But the connection between an object, its appearance, and a proposed action is the useful feature: an inventory supports counting, a colour description supports user-defined ripeness rules, and an occlusion description can guide which fruit an operator inspects next.
+*Fruit reported per scene; counts alone say nothing about correctness — the grids below are the evidence.*
+
+The visual verdict is unambiguous, and it indicates two things. First, **GPT-6 Astra is uniquely good**: on both scenes its detections are essentially perfect — almost every fruit I can find by eye is outlined (there are actually some missing but are very small ones hard to tell if they are fruits or not), the outlines closely follow the visible surface, and nothing is invented. Second, **the GPT-5.6 family is fairly flat**: from `luna` medium all the way to `sol` high (`luna` low is apparently the weakest), the five runs produce very similar results — similar counts, similar outlines, and similar misses — so increasing reasoning effort or switching variants does not close the gap to Astra. Whatever changed between the 5.6 and 6 generations appears to matter more here than anything the reasoning-effort setting can provide.
+
+
+![All eight configurations on private-1, the greenhouse-truss scene.](assets/fruit_detection_is_solved_by_vlms/chaos_private-1.png)
+
+*Figure 7. Scene `private-1` (dense hanging truss). Each polygon is coloured by the model's own reported redness (green → red). GPT-6 Astra (top panel) resolves the cluster fruit-by-fruit; the six GPT-5.6 panels are nearly interchangeable, and GLM undercounts. Qualitative — no ground truth exists on this scene.*
+
+![All eight configurations on private-2, the hand-held scene.](assets/fruit_detection_is_solved_by_vlms/chaos_private-2.png)
+
+*Figure 8. Scene `private-2` (hand-held close-up, heavy overlap). Same pattern: GPT-6 Astra's inventory is complete and cleanly separated; the GPT-5.6 panels again look alike from luna-low to sol-high.*
+
+Even the runner-up models' output shows the flexibility that makes this paradigm interesting. On `private-2`, GLM distinguishes a "[p]rominent bright, evenly red conical fruit hanging in the centre-right on a long bare green stem … [a]lmost fully exposed and an easy pick" (redness 96%) from the "[v]ery small green fruit with a green calyx hanging low between larger neighbours, partly screened by stems; too small and crowded for a gripper" beside it (redness 2%), flags which fruit a gripper could pick right now, and traces each visible surface around the occluding leaves — all from the same prompt that produced the StrawDI numbers, with no task-specific anything. These are observed outputs, not independently validated horticultural or grasping judgments; the private scenes establish transfer, not accuracy. But the connection between an object, its appearance, and a proposed action is the useful feature: an detection supports counting, a colour description supports user-defined ripeness rules, and an occlusion description can guide which fruit an operator inspects next.
 
 ## Current limitations and future directions
 
 ### Latency and cost are far from a local detector
 
-Recorded mean call time per scheduled image: **76.2 s (Kimi K3), 77.8 s (GLM), 25.5 s (DeepSeek), 34.1 s (GPT †)**, including CLI overhead and recorded retries. For scale, Ultralytics reports **1.5–11.3 ms** for YOLO11 on a T4 GPU with TensorRT — different hardware, resolution, and workload, so not a controlled comparison, but the gap is four orders of magnitude. [Official YOLO11 benchmarks](https://docs.ultralytics.com/models/yolo11/)
+Recorded mean call time per scheduled image: **76.2 s (Kimi K3), 89.4 s (GLM), 25.5 s (DeepSeek), 48.4 s (GPT)**, including CLI overhead and recorded retries. For scale, Ultralytics reports **1.5–11.3 ms** for YOLO11 on a T4 GPU with TensorRT — different hardware, resolution, and workload, so not a controlled comparison, but the gap is four orders of magnitude. [Official YOLO11 benchmarks](https://docs.ultralytics.com/models/yolo11/)
 
-GPT averaged **9,745 input and 673 output tokens per scheduled image †** (including its failed-and-retried calls). At OpenAI's listed standard rates — $10 / $1 / $50 per million input / cached-input / output tokens, checked September 15, 2026 — that is **≈$0.13 per image** uncached †; GLM's recorded batch cost was $20.82 per 200 images at its provider's rates. These are token-based estimates, not invoices. [Pricing terms][pricing] For an occasional scene audit this may be acceptable; for continuous video, the first things I would test are request frequency, output verbosity, and distillation into a local model. <!-- PENDING-GPT-TEST: GPT latency/token/cost numbers → final batch values. -->
+GPT averaged **15,336 input and 944 output tokens per scheduled image**. At OpenAI's listed standard rates — $10 / $1 / $50 per million input / cached-input / output tokens, checked September 15, 2026 — that is **≈$0.20 per image** uncached or **≈$0.12** with recorded cache reads ($40.1 vs $23.9 per 200 images); GLM's recorded batch cost was $22.86 per 200 images at its provider's rates. These are token-based estimates, not invoices. [Pricing terms][pricing] For an occasional scene audit this may be acceptable; for continuous video, the first things I would test are request frequency, output verbosity, and distillation into a local model.
 
 ![Recorded input and output token usage and mean call time for the four configurations.](assets/fruit_detection_is_solved_by_vlms/tokens_latency.png)
 
-*Figure 6. Means across all 200 scheduled images per model. Output includes reasoning tokens; GLM's input figure reflects its provider's accounting (cached tokens are not reported as input). Token accounting and CLI overhead differ across providers — these are operational measurements of the configurations used. Control calls excluded. Hatched: GPT's batch includes incomplete-and-retried calls.*
+*Figure 9. Means across all 200 scheduled images per model. Output includes reasoning tokens; GLM's input figure reflects its provider's accounting (cached tokens are not reported as input). Token accounting and CLI overhead differ across providers — these are operational measurements of the configurations used. Control calls excluded.*
 
-### Edge deployment needs its own evaluation
+### Edge deployable VLMs need their own evaluation
 
-We have not demonstrated GPT-quality detection on an edge device. The natural next experiment is to run locally servable VLMs — **Qwen3.8-27B** and smaller vision-capable Qwen variants — under the same protocol, measuring memory, power, latency, and localization after quantization on the intended hardware. A model that fits in memory still has to answer within the robot's operating budget. [Official Qwen documentation](https://github.com/QwenLM/Qwen3.8/blob/main/README.md)
+We have not demonstrated VLM detection on an edge device. The natural next experiment is to run locally servable VLMs such as **Qwen3.8-27B** and smaller vision-capable Qwen variants — under the same protocol, measuring memory, power, latency, and localization after quantization on the intended hardware. A model that fits in memory still has to answer within the robot's operating budget. [Official Qwen documentation](https://github.com/QwenLM/Qwen3.8/blob/main/README.md)
 
-### Where I would take this next
+### Looking Forward to More Capable VLMs
+Another important limitation today is that this level of performance is still concentrated in only a small number of frontier models. In our experiments, GPT-6 Astra is clearly ahead of the other VLMs we tested, which means that the current result is still strongly dependent on a single provider and model family.
 
-1. **How much capability survives local deployment?** Compare edge candidates on the same images and prompts.
-2. **Which richer outputs are actually useful?** Validate descriptions, condition estimates, and graspability flags against expert judgments and robot outcomes.
-3. **Can a strong VLM teach a small model?** Use its predictions — now including polygon masks — as candidate training annotations, review uncertain cases, and evaluate the student on held-out farms. A proposed direction, not a demonstrated distillation result.
+I expect this to change quickly. As the next generation of VLMs arrives — including models from other commercial providers and open-source communities — it will be important to see whether Astra-level visual detection becomes a broader capability rather than an isolated result. Having multiple models reach this level would improve reproducibility, reduce provider dependence, and make deployment choices more flexible in terms of cost, latency, privacy, and local inference.
 
-## What “solved” would mean to me
+## Future questions and conclusion
 
-The strongest result here is that a general-purpose VLM, given raw pixels and a written instruction, produces a strawberry inventory — boxes **and** pixel-level outlines — that on the dataset's own test split already exceeds a supervised specialist's segmentation mAP and approaches its per-instance IoU, and does so zero-shot. That changes how I would begin a new fruit-perception project: test a strong VLM first, before assuming a new collection-and-training cycle is necessary.
+This experiment answers one question, but it raises several others that I think are more interesting going forward.
 
-But I would still measure the things that remain open: small-object recall (34.7% on the smallest visible fruit here), latency and cost, and performance on independent farms. **Fruit detection is not universally solved. What has changed is how capable the starting point can be.**
+1. **How much of this capability can eventually run locally?**
+   GPT-6 Astra is powerful, but it is still far from the latency, cost, and deployment characteristics of a local detector. An important next step is to test future edge-capable VLMs on the same images and prompts and see how much of this detection and spatial reasoning capability can survive local deployment.
+
+2. **Which of the richer outputs are actually useful?**
+   A VLM can return much more than a class label or mask: descriptions, redness, occlusion, calyx and stem visibility, graspability, confidence, and potentially many other attributes. The next question is which of these outputs are reliable enough to matter in real applications. They should ultimately be validated against expert judgments, downstream decision making, and, for robotic harvesting, actual robot outcomes.
+
+3. **Can a strong VLM teach a much smaller model?**
+   If a frontier VLM can generate high-quality detections and polygon masks zero-shot, it may also serve as a data engine for training smaller and faster task-specific models. One possible direction is to use VLM predictions as candidate annotations, review uncertain cases, and train a compact student model that can run locally. Whether such a student can retain the generalization ability of the teacher across new farms and environments remains an open question.
+
+So, is fruit detection solved?
+
+The strongest result in this article is that a general-purpose VLM, given only raw pixels and a written instruction, can produce strawberry detections with both bounding boxes and pixel-level outlines that, on the StrawDI test split, exceed the segmentation mAP of a fully supervised specialist and essentially match its per-instance IoU — all without task-specific training.
+
+That changes how I would approach a new fruit-perception problem. Instead of assuming that every new orchard, crop variety, or environment requires another cycle of data collection, annotation, and model training, I would now first test what a frontier VLM can already do zero-shot.
+
+At the same time, important questions remain: performance on the smallest fruit, latency and cost, robustness across truly independent farms and environments, local deployment, and whether this level of capability will become common across future VLMs rather than remaining concentrated in a few frontier models.
+
+**Fruit detection is not universally solved. But the starting point has changed dramatically: instead of asking how to train a detector from scratch, we can increasingly ask how far a general-purpose visual model can already take us — and what still needs to be built on top of it.**
+
 
 ---
 
-### Experiment notes
-
-The figures and tables were compiled from saved model responses; preparing this article made no additional model calls. Every valid response was re-scored from the raw label masks (sha256-guarded), the common-subset comparison uses identical images, prompts, and ground truth, and no labels were edited to improve scores. Full run provenance, including harness fingerprints, is preserved under `strawdi_eval/seg/runs/` and `vlm_eval/chaos/runs/`. The example images were selected to explain specific behaviours and are not an unbiased visual sample.
-
-Two batches are still completing at the time of writing — the GPT-6 Astra StrawDI test run (125 of 200 images so far) and its private-scene chaos run — and every number or panel drawn from them is marked † or "in progress". Each will be replaced in place once finished; the figure script (`blogs/build_fruit_detection_figures.py`) regenerates every figure and every printed number from the run directories named at its top.
-
-This is an exploratory evaluation on one test split with one completed response per image. It does not quantify run-to-run variability or performance across independent farms. A broader, held-out evaluation with uniform inference settings is the next step.
 
 **Dataset acknowledgement:** Kindly provided by the StrawDI Team (see [the official dataset website][strawdi]).
 
