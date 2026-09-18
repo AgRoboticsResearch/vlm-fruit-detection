@@ -29,3 +29,7 @@ blog_study/strawdi_eval/agent_cwd/
 
 # Agent-bridge runtime state (regenerable)
 blog_study/strawdi_eval/agent_bridge/state/
+
+# paper_study: derived testbed frames + GT checks (datasets live on the mount)
+paper_study/data/
+paper_study/agent_cwd/

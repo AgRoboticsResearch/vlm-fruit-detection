@@ -147,5 +147,13 @@ of the eval.
 
 ## Paper study (`paper_study/`)
 
-Reserved for the extended paper version of the blog study. Empty for now —
-add its own spec/AGENTS.md here when work starts.
+The extended-paper version of the blog study: the same nine-field fruit
+inventory prompt generalised across public fruit datasets (MinneApple,
+WGISD, ACFR multifruit, KFuji RGB-DS, StrawDI), on a 3-frames-per-dataset
+mixed testbed from each dataset's own test split, glm-5.3-flash with
+thinking at max. Own runbook:
+[`paper_study/AGENTS.md`](paper_study/AGENTS.md); dataset/task/metrics
+tracking table: [`paper_study/DATASETS.md`](paper_study/DATASETS.md).
+Datasets stay on the GLOWAY mount; imports the blog_study provider stack and
+scorers unchanged; same invariants (control first, tools off, no annotated
+inputs, ≤1280 px, dual provenance fingerprints).
