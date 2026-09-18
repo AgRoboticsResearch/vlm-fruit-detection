@@ -27,9 +27,22 @@ are never model inputs.
 
 glm-5.3-flash via claude CLI, **reasoning effort max**, 21/21 calls parsed +
 schema-valid, zero tool attempts, control 2.2 px, verifier **PASS (257
-checks)**; 161,388 tokens, $3.09, 13 min at `--jobs 3`. Full artefacts:
+checks)**; 161,388 tokens (94,850 in + 113,963 out; 16,960 cached reads
+excluded from the total per base-harness convention — 208,813 incl.), $3.09
+billed, 13 min at `--jobs 3`. Full artefacts:
 `paper_study/runs/20260918-225204-…-full/` (report.md, responses.jsonl,
-metrics.csv, summary_by_source.csv, overlays).
+metrics.csv, summary_by_source.csv, overlays/ per dataset).
+
+**Token accounting (2026-09-18):** usage is taken from the CLI-reported
+token counts (`modelUsage` in the result event: input / cached / output) —
+the bill is recorded separately as the endpoint's own `costUSD` and is not
+used to derive any token number. Cross-check (secondary, one-off): the
+billed cost is explained exactly by the reported counts at $5/$0.5/$25 per
+MTok in/cached/out (max per-call residual < 1e-4¢ over all 21 calls) — so
+on this endpoint nothing is billed outside the reported tokens; thinking
+rides inside `output_tokens` (the CLI does not split it;
+`reasoning_output_tokens` stays 0 on the claude path). If hidden billed
+thinking is ever suspected, re-run that fit and look for residuals.
 
 Failure shape, per source:
 

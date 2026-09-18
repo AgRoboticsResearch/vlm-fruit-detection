@@ -333,7 +333,7 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
 
     title = (f"{sample['source']} | {sample['sample_id']} | "
              f"{sample['n_gt']}gt | {scored['status']}")
-    rel = Path("overlays") / f"{stem}.jpg"
+    rel = Path("overlays") / sample["source"] / f"{stem}.jpg"
     try:
         raw = imaging.load_rgb(image)
         # Colour polygons by MASK matches where masks exist, else BOX matches.

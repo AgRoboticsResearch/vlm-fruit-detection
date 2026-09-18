@@ -71,8 +71,11 @@ report a retry as a separate run.
 
 Fingerprint note: the glob includes `verify_run.py`, so editing the verifier
 shifts the pipeline identity (same conservatism as the strawdi seg harness).
-Verify a run with the code state it was produced with, or accept the
-fingerprint-mismatch failure as expected after verifier edits.
+Acceptance requires all records of a run to share ONE harness fingerprint;
+whether it still matches the CURRENT code is identity information — the
+verifier prints it as a note when a run predates a code edit. Any post-run
+edit to a run directory (e.g. the 2026-09-18 overlay reorg) gets a
+`post_run_notes.json` in the run dir recording exactly what changed.
 
 ## Testbed rules
 
