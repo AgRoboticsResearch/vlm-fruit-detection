@@ -1,8 +1,8 @@
 # Is Visual Fruit Detection Solved by Vision-Language Models, and What Remains? — In the GPT-6 Astra Era and Beyond
 
-Sep 16, 2026 Zhenghao Fei [email](mailto:fei.holly@gmail.com)
+Sep 16, 2026 Zhenghao Fei [📧](mailto:fei.holly@gmail.com)
 
-> **TL;DR** — I tested whether frontier vision-language models, given only raw pixels and a written instruction, can do fruit detection zero-shot. On the StrawDI benchmark's own 200-image test split, GPT-6 Astra's visible-surface outlines reach segmentation mAP **60.1** — ahead of the dataset's fully supervised Mask R-CNN (**45.36**, trained on 2,800 images) — and within two points of its per-instance IoU (**86.0 vs 87.7**). No other tested VLM is close (best runner-up: mAP 30.9). The same single prompt also returns each fruit's ripeness, occlusion, and graspability, and the transfer holds on private chaotic scenes the model cannot have memorized. What remains open: the smallest fruit (38% recall), ~48 s and ≈$0.20 per image, and — as a provider-routing incident during the runs shows — verifying that the model that answered is the model you asked for. Fruit detection is not universally solved, but the zero-shot starting point now rivals supervised specialists: test a strong VLM first.
+> **TL;DR** — I tested whether frontier vision-language models can perform fruit detection directly from raw images and a written prompt, without task-specific training. On all 200 images of the StrawDI test set, GPT-6 Astra achieved 60.1 segmentation mAP and 86.0 mean instance IoU — exceeding the dataset’s fully supervised Mask R-CNN benchmark in mAP (45.36) and nearly matching its IoU (87.7), despite using no StrawDI training data. The other VLMs we tested were substantially behind, suggesting that this is still a frontier-model capability rather than a general property of VLMs. Astra also showed surprisingly strong performance on small fruit and transferred qualitatively to difficult private scenes, while the same prompt could return masks together with attributes such as redness, occlusion, and graspability. Important limitations remain, especially very small fruit, latency, cost, local deployment, and dependence on a small number of frontier models. Fruit detection is not universally solved, but the starting point has changed dramatically: a strong VLM is now worth testing before collecting and labeling a new task-specific dataset.
 
 Detecting fruit in images has been a long-standing challenge in agricultural computer vision. It is hard not because we cannot achieve high accuracy on a specific dataset, but because real-world scenarios are highly variable. No two orchards look the same, and the same type of fruit can look very different depending on the environment (weather, lighting, occlusion, etc.) and the fruit itself (variety and horticultural practices). Most deep learning-based fruit detection methods rely on large amounts of labelled data to cover the variability (distribution) in the real world. Detection in out-of-distribution (OOD) scenarios often fails. Unfortunately, due to the inherent variability of real-world conditions and data privacy issues, fruit detection always has to deal with OOD scenarios. This means that one often cannot deploy a model trained in one orchard directly to another orchard without fine-tuning it with new data.
 
@@ -16,16 +16,6 @@ What motivated me to re-evaluate VLMs for fruit detection was the release of GPT
 
 In this blog, I will share my experience using GPT-6 Astra and other VLMs for fruit detection, examine what has changed compared with earlier generations of VLMs, and explain why the results surprised me so much.
 
-[#	Reference
-[1]	Fei, Z., Olenskyj, A. G., Bailey, B. N., & Earles, M. (2021). Enlisting 3D crop models and GANs for more data-efficient and generalizable fruit detection. Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV), 1269–1277.
-[2]	Wang, Y., Fei, Z., Li, R., & Ying, Y. (2025). Learn from foundation model: Fruit detection model without manual annotation. Pattern Recognition, 112799.
-[3]	Wang, Y., Li, W., Ying, Y., & Fei, Z. (2026). GEAR-Seg: A Grounded Explainable Agent for Reasoning Segmentation and Data Engine. arXiv preprint arXiv:2607.00544.
-[4]	Ranasinghe et al. (2024). Learning to Localize Objects Improves Spatial Reasoning in Visual-LLMs. CVPR 2024.
-[5]	Schaumloffel et al. (2026). Mechanisms of Object Localization in Vision-Language Models. CVPR 2026.
-[6]	SOUBench: Benchmarking Small-Object Understanding in Multimodal Large Language Models. 2026.
-[7]	OpenAI. (2026). GPT-6 Astra: The Next Generation in Intelligence for Work. https://openai.com/index/gpt-6-astra-next-generation-work/
-[8]	Su et al. (2026). GPT-6 Astra as an Embodied Policy. https://anonymous-report-421.github.io/public-website/?lang=en&view=1
-[9]	Robocurve. (2026). GPT-6 Astra on Robotic Manipulation. https://openai.robocurve.org/gpt-6-astra/]
 
 I am particularly impressed by three aspects of what VLMs may offer from this point forward.
 
@@ -42,7 +32,7 @@ I am particularly impressed by three aspects of what VLMs may offer from this po
 
 We chose the **Strawberry Digital Images dataset (StrawDI)** as a benchmark for our experiments. It is a well-known dataset in the fruit detection community, and it provides a challenging testbed for evaluating the performance of visual detection models. The StrawDI contains photographs collected at commercial plantations in Huelva, Spain. Its annotated subset, **StrawDI_Db1**, contains 3,100 images at 1008 × 756 pixels, split into 2,800 training, 100 validation, and 200 test images, with an instance mask for every strawberry — including unripe, occluded, distant, and partly cropped fruit. [Official dataset description][strawdi]
 
-We evaluated **all 200 test images (1,132 annotated strawberries)** — the same split the dataset's own paper benchmarks on, so our numbers can be set next to its supervised specialist directly. No model was trained or fine-tuned on StrawDI: this is a zero-shot evaluation in the operational sense. It worth noting that because StrawDI is public, it does not guarantee that the images were absent from model pretraining.
+We evaluated **all 200 test images (1,132 annotated strawberries)** — the same split the dataset's own paper benchmarks on [10], so our numbers can be set next to its supervised specialist directly. No model was trained or fine-tuned on StrawDI: this is a zero-shot evaluation in the operational sense. It worth noting that because StrawDI is public, it does not guarantee that the images were absent from model pretraining.
 
 ### The task and the controls
 
@@ -100,7 +90,7 @@ The following metrics are computed for the epxeriments:
 - **Mean matched mask IoU** is the average IoU of matched prediction–label pairs — the same quantity the StrawDI paper reports as mean per-instance IoU (I²oU).
 - **Count MAE** is the mean absolute per-image error in fruit count — inventory error, not localization quality.
 
-Our scorer uses all-points interpolation, not the full COCO protocol's 101 recall thresholds. [Official COCO evaluator](https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py) F1 is our primary metric: the VLMs' reported confidences cluster near 100, so AP ranking is sensitive to ties. 
+Our scorer uses all-points interpolation, not the full COCO protocol's 101 recall thresholds [11]. F1 is our primary metric: the VLMs' reported confidences cluster near 100, so AP ranking is sensitive to ties. 
 
 ## Results: instance segmentation on the dataset's own benchmark
 
@@ -202,9 +192,9 @@ Even the runner-up models' output shows the flexibility that makes this paradigm
 
 ### Latency and cost are far from a local detector
 
-Recorded mean call time per scheduled image: **76.2 s (Kimi K3), 89.4 s (GLM), 25.5 s (DeepSeek), 48.4 s (GPT)**, including CLI overhead and recorded retries. For scale, Ultralytics reports **1.5–11.3 ms** for YOLO11 on a T4 GPU with TensorRT — different hardware, resolution, and workload, so not a controlled comparison, but the gap is four orders of magnitude. [Official YOLO11 benchmarks](https://docs.ultralytics.com/models/yolo11/)
+Recorded mean call time per scheduled image: **76.2 s (Kimi K3), 89.4 s (GLM), 25.5 s (DeepSeek), 48.4 s (GPT)**, including CLI overhead and recorded retries. For scale, Ultralytics reports **1.5–11.3 ms** for YOLO11 on a T4 GPU with TensorRT — different hardware, resolution, and workload, so not a controlled comparison, but the gap is four orders of magnitude. [12]
 
-GPT averaged **15,336 input and 944 output tokens per scheduled image**. At OpenAI's listed standard rates — $10 / $1 / $50 per million input / cached-input / output tokens, checked September 15, 2026 — that is **≈$0.20 per image** uncached or **≈$0.12** with recorded cache reads ($40.1 vs $23.9 per 200 images); GLM's recorded batch cost was $22.86 per 200 images at its provider's rates. These are token-based estimates, not invoices. [Pricing terms][pricing] For an occasional scene audit this may be acceptable; for continuous video, the first things I would test are request frequency, output verbosity, and distillation into a local model.
+GPT averaged **15,336 input and 944 output tokens per scheduled image**. At OpenAI's listed standard rates — $10 / $1 / $50 per million input / cached-input / output tokens, checked September 15, 2026 — that is **≈$0.20 per image** uncached or **≈$0.12** with recorded cache reads ($40.1 vs $23.9 per 200 images); GLM's recorded batch cost was $22.86 per 200 images at its provider's rates. These are token-based estimates, not invoices. [13] For an occasional scene audit this may be acceptable; for continuous video, the first things I would test are request frequency, output verbosity, and distillation into a local model.
 
 ![Recorded input and output token usage and mean call time for the four configurations.](assets/fruit_detection_is_solved_by_vlms/tokens_latency.png)
 
@@ -212,7 +202,7 @@ GPT averaged **15,336 input and 944 output tokens per scheduled image**. At Open
 
 ### Edge deployable VLMs need their own evaluation
 
-We have not demonstrated VLM detection on an edge device. The natural next experiment is to run locally servable VLMs such as **Qwen3.8-27B** and smaller vision-capable Qwen variants — under the same protocol, measuring memory, power, latency, and localization after quantization on the intended hardware. A model that fits in memory still has to answer within the robot's operating budget. [Official Qwen documentation](https://github.com/QwenLM/Qwen3.8/blob/main/README.md)
+We have not demonstrated VLM detection on an edge device. The natural next experiment is to run locally servable VLMs such as **Qwen3.8-27B** and smaller vision-capable Qwen variants — under the same protocol, measuring memory, power, latency, and localization after quantization on the intended hardware. A model that fits in memory still has to answer within the robot's operating budget. [14]
 
 ### Looking Forward to More Capable VLMs
 Another important limitation today is that this level of performance is still concentrated in only a small number of frontier models. In our experiments, GPT-6 Astra is clearly ahead of the other VLMs we tested, which means that the current result is still strongly dependent on a single provider and model family.
@@ -248,8 +238,34 @@ At the same time, important questions remain: performance on the smallest fruit,
 
 **Dataset acknowledgement:** Kindly provided by the StrawDI Team (see [the official dataset website][strawdi]).
 
-**Dataset paper:** Isaac Pérez-Borrero, Diego Marín-Santos, Manuel E. Gegúndez-Arias, and Estefanía Cortés-Ancos. “A fast and accurate deep learning method for strawberry instance segmentation.” *Computers and Electronics in Agriculture* 178 (2020), 105736. [doi:10.1016/j.compag.2020.105736][paper]
+## References
+
+[1] Fei, Z., Olenskyj, A. G., Bailey, B. N., & Earles, M. (2021). Enlisting 3D crop models and GANs for more data-efficient and generalizable fruit detection. *Proceedings of the IEEE/CVF International Conference on Computer Vision (ICCV)*, 1269–1277.
+
+[2] Wang, Y., Fei, Z., Li, R., & Ying, Y. (2025). Learn from foundation model: Fruit detection model without manual annotation. *Pattern Recognition*, 112799.
+
+[3] Wang, Y., Li, W., Ying, Y., & Fei, Z. (2026). GEAR-Seg: A Grounded Explainable Agent for Reasoning Segmentation and Data Engine. *arXiv preprint* arXiv:2607.00544.
+
+[4] Ranasinghe, K., et al. (2024). Learning to Localize Objects Improves Spatial Reasoning in Visual-LLMs. *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*.
+
+[5] Schaumloffel, L., et al. (2026). Mechanisms of Object Localization in Vision-Language Models. *Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)*.
+
+[6] SOUBench: Benchmarking Small-Object Understanding in Multimodal Large Language Models. (2026).
+
+[7] OpenAI. (2026). GPT-6 Astra: The Next Generation in Intelligence for Work. https://openai.com/index/gpt-6-astra-next-generation-work/
+
+[8] Su et al. (2026). GPT-6 Astra as an Embodied Policy. https://anonymous-report-421.github.io/public-website/?lang=en&view=1
+
+[9] Robocurve. (2026). GPT-6 Astra on Robotic Manipulation. https://openai.robocurve.org/gpt-6-astra/
+
+[10] Pérez-Borrero, I., Marín-Santos, D., Gegúndez-Arias, M. E., & Cortés-Ancos, E. (2020). A fast and accurate deep learning method for strawberry instance segmentation. *Computers and Electronics in Agriculture*, 178, 105736. https://doi.org/10.1016/j.compag.2020.105736
+
+[11] COCO Consortium. Common Objects in Context (COCO) evaluation API (`cocoeval.py`). https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py
+
+[12] Ultralytics. YOLO11 performance benchmarks. https://docs.ultralytics.com/models/yolo11/
+
+[13] OpenAI. GPT-6 Astra API pricing. https://developers.openai.com/api/docs/models/gpt-6-astra
+
+[14] Qwen Team. Qwen3.8 documentation. https://github.com/QwenLM/Qwen3.8/blob/main/README.md
 
 [strawdi]: https://strawdi.github.io/
-[paper]: https://www.sciencedirect.com/science/article/pii/S0168169920300624
-[pricing]: https://developers.openai.com/api/docs/models/gpt-6-astra
