@@ -58,16 +58,10 @@ from paper_study.lib import gtload  # noqa: E402
 from paper_study.lib import prompt as fruit_prompt  # noqa: E402
 
 HARNESS_NAME = "paper_fruit_seg"
-HARNESS_VERSION = "0.1.0"
-STYLE_NAME = fruit_prompt.STYLE_NAME
-SCHEMA_PATH = HERE / "schema" / "fruit_inventory_schema.json"
+HARNESS_VERSION = "0.1.1"
 DEFAULT_RUNS_DIR = HERE / "runs"
 DEFAULT_JOBS = 3
-
-# Fields copied through on every parsed fruit (bbox is normalised separately;
-# polygon rides raw and is normalised by the mask scorer's rasteriser).
-FRUIT_ATTRS = ("polygon", "redness_pct", "occlusion_pct", "calyx_visible",
-               "peduncle_visible", "graspable", "confidence_pct", "description")
+FORMAT_KEYS = tuple(fruit_prompt.FORMATS)          # ("full9", "seg3", "box2")
 
 POLYGON_FIDELITY_NOTE = (
     "Straight segments between <= 32 whole-pixel vertices (PIL raster "
@@ -104,11 +98,13 @@ def harness_info() -> dict:
 
 
 def run_dir_name(stamp: str, model: str, effort: str | None,
-                 tag: str = "", cli: str = "") -> str:
+                 tag: str = "", cli: str = "", fmt: str = "full9") -> str:
     parts = [stamp, vre.slugify(model), vre.slugify(effort or "default")]
     if cli:
         parts.append(vre.slugify(cli))
     parts.append(vre.slugify(HARNESS_NAME))
+    if fmt != "full9":
+        parts.append(vre.slugify(fmt))
     if tag:
         parts.append(vre.slugify(tag))
     return "-".join(parts)
@@ -165,7 +161,12 @@ def mask_gt_areas(masks) -> list[float]:
 # ---------------------------------------------------------------------------
 
 def classify_fruit_inventory(last_message: str, schema: dict) -> dict:
-    """Parse the nine-field fruit inventory ('fruits' key; bare list wrapped)."""
+    """Parse a fruit inventory ('fruits' key; bare list wrapped).
+
+    Format-agnostic: bbox is normalised, every OTHER schema-allowed field is
+    copied through verbatim (polygon, confidence_pct, ... — whichever the
+    format asks for; the schema already rejected anything else).
+    """
     result = {"status": None, "json_method": None, "schema_valid": None,
               "schema_error": None, "fruits": [], "n_fruits": 0}
     text = (last_message or "").strip()
@@ -189,7 +190,8 @@ def classify_fruit_inventory(last_message: str, schema: dict) -> dict:
     for entry in payload["fruits"]:
         box = parse.normalise_box(entry.get("bbox"))
         fruit = {"bbox": list(box) if box else None}
-        fruit.update({key: entry.get(key) for key in FRUIT_ATTRS})
+        fruit.update({key: value for key, value in entry.items()
+                      if key != "bbox"})
         fruits.append(fruit)
     result["fruits"] = fruits
     result["n_fruits"] = len(fruits)
@@ -197,11 +199,13 @@ def classify_fruit_inventory(last_message: str, schema: dict) -> dict:
     return result
 
 
-def mask_block(status, inventory, gt_masks, gt_areas, frame_w, frame_h, n_gt) -> dict:
-    if gt_masks is None:
-        return {**seg_scoring.empty_masks(), "n_gt": n_gt, "mask_scored": False}
-    if status != parse.OK:
-        return {**seg_scoring.empty_masks(), "n_gt": n_gt, "mask_scored": False}
+def mask_block(status, inventory, gt_masks, gt_areas, frame_w, frame_h, n_gt,
+               asks_polygons: bool = True) -> dict:
+    if gt_masks is None or status != parse.OK or not asks_polygons:
+        reason = ("format asks no polygons" if not asks_polygons else None)
+        return {**seg_scoring.empty_masks(), "n_gt": n_gt,
+                "mask_scored": False, **({"mask_unscored_reason": reason}
+                                         if reason else {})}
     block = seg_scoring.score_masks_image(inventory, gt_masks, gt_areas,
                                           frame_w, frame_h)
     return {**block, "mask_scored": True}
@@ -220,12 +224,14 @@ def box_metrics_block(status, inventory, gt_boxes, gt_areas, frame_w, frame_h) -
 def run_one(args, manifest, sample, run_ctx) -> dict:
     image = HERE / sample["images"]["raw"]
     h, w = sample["image_shape_hw"]
-    prompt = fruit_prompt.build_fruit_inventory_segmentation(w, h, sample["source"])
-    schema = json.loads(SCHEMA_PATH.read_text())
+    fmt = run_ctx["fmt_spec"]
+    style = fmt["style"]
+    prompt = fmt["build"](w, h, sample["source"])
+    schema = json.loads((HERE / "schema" / fmt["schema"]).read_text())
 
     model = run_ctx["model"]
     effort = run_ctx["effort"]
-    stem = f"{STYLE_NAME}__{sample['sample_id']}"
+    stem = f"{style}__{sample['sample_id']}"
     attempts: list[dict] = []
     fallback_used = False
     fallback_reason = None
@@ -268,9 +274,11 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
         gt_mask_error = f"{type(exc).__name__}: {exc}"
 
     gt_areas_masks = mask_gt_areas(gt_masks) if gt_masks is not None else None
+    asks_polygons = bool(fmt["polygons"])
     record = {
         "run_id": stem,
-        "style": STYLE_NAME,
+        "style": style,
+        "format": run_ctx["fmt"],
         "sample_id": sample["sample_id"],
         "source": sample["source"],
         "split": sample["split"],
@@ -306,7 +314,8 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
         "gt_masks_loaded": gt_masks is not None,
         "gt_mask_error": gt_mask_error,
         **mask_block(scored["status"], inventory, gt_masks,
-                     gt_areas_masks or sample["gt_areas"], w, h, sample["n_gt"]),
+                     gt_areas_masks or sample["gt_areas"], w, h, sample["n_gt"],
+                     asks_polygons=asks_polygons),
         "box_metrics": box_metrics_block(scored["status"], inventory,
                                          sample["gt_boxes"], sample["gt_areas"],
                                          w, h),
@@ -336,15 +345,22 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
     rel = Path("overlays") / sample["source"] / f"{stem}.jpg"
     try:
         raw = imaging.load_rgb(image)
-        # Colour polygons by MASK matches where masks exist, else BOX matches.
-        if record.get("mask_scored"):
-            matches = record.get("matches_50") or []
-            fn_idx = record.get("fn_gt_indices_50") or []
+        if asks_polygons:
+            # Colour polygons by MASK matches where masks exist, else BOX matches.
+            if record.get("mask_scored"):
+                matches = record.get("matches_50") or []
+                fn_idx = record.get("fn_gt_indices_50") or []
+            else:
+                matches = record["box_metrics"].get("matches_50") or []
+                fn_idx = record["box_metrics"].get("fn_gt_indices_50") or []
+            overlay = seg_render.draw_segmentation_overlay(
+                raw, inventory, gt_masks, sample["gt_boxes"], matches, fn_idx, title)
         else:
+            # No polygons asked: colour the predicted BOXES by box matching.
             matches = record["box_metrics"].get("matches_50") or []
             fn_idx = record["box_metrics"].get("fn_gt_indices_50") or []
-        overlay = seg_render.draw_segmentation_overlay(
-            raw, inventory, gt_masks, sample["gt_boxes"], matches, fn_idx, title)
+            overlay = draw_box_overlay(raw, inventory, sample["gt_boxes"],
+                                       matches, fn_idx, title)
         imaging.save_jpg(overlay, run_ctx["run_dir"] / rel)
         record["overlay"] = str(rel)
     except Exception as exc:  # a drawing bug must not throw away a paid answer
@@ -353,10 +369,55 @@ def run_one(args, manifest, sample, run_ctx) -> dict:
     return record
 
 
+def draw_box_overlay(image_rgb, inventory, gt_boxes, matches_50, fn_gt_indices,
+                     title: str, header_px: int = 34):
+    """Diagnostic overlay for polygon-less formats: GT fills + pred boxes.
+
+    Same visual language as the segmentation overlay where it transfers:
+    white translucent GT mask fills (or outlines when no mask GT exists),
+    green boxes = TP, red boxes = FP, red MISS labels on missed GT.
+    """
+    from PIL import Image as _Image, ImageDraw as _ImageDraw
+    h, w = image_rgb.shape[:2]
+    frame = _Image.fromarray(np.asarray(image_rgb, dtype=np.uint8)).copy()
+    canvas = _Image.new("RGB", (w, h + header_px), (0, 0, 0))
+    canvas.paste(frame, (0, header_px))
+    draw = _ImageDraw.Draw(canvas)
+    scale = max(1.0, min(h, w) / 720.0)
+    width = max(2, int(round(3 * scale)))
+    tp_preds = {m["pred_index"] for m in (matches_50 or [])}
+    for index, fruit in enumerate(inventory or []):
+        box = fruit.get("bbox") if isinstance(fruit, dict) else None
+        if not box:
+            continue
+        x1, y1, x2, y2 = [float(v) for v in box]
+        colour = (60, 230, 90) if index in tp_preds else (255, 60, 60)
+        draw.rectangle([x1, y1 + header_px, x2, y2 + header_px],
+                       outline=(0, 0, 0), width=width + 2)
+        draw.rectangle([x1, y1 + header_px, x2, y2 + header_px],
+                       outline=colour, width=width)
+    for gt_index in sorted(set(fn_gt_indices or [])):
+        if gt_index >= len(gt_boxes):
+            continue
+        x1, y1, x2, y2 = [float(v) for v in gt_boxes[gt_index]]
+        draw.rectangle([x1, y1 + header_px, x2, y2 + header_px],
+                       outline=(255, 255, 255), width=width)
+        draw.text((x1 + 2, y2 + header_px + 2), "MISS", fill=(255, 60, 60))
+    n_pred = len(inventory or [])
+    tp = len(matches_50 or [])
+    draw.text((6, header_px // 2 - 8), title, fill=(255, 255, 255))
+    draw.text((w - 260, header_px // 2 - 8),
+              f"pred {n_pred} / gt {len(gt_boxes)}  TP {tp} "
+              f"FP {n_pred - tp} FN {len(set(fn_gt_indices or []))}",
+              fill=(255, 255, 255))
+    return np.array(canvas)
+
+
 def failure_record(sample: dict, exc: BaseException, run_ctx) -> dict:
     return {
-        "run_id": f"{STYLE_NAME}__{sample['sample_id']}",
-        "style": STYLE_NAME,
+        "run_id": f"{run_ctx['fmt_spec']['style']}__{sample['sample_id']}",
+        "style": run_ctx["fmt_spec"]["style"],
+        "format": run_ctx["fmt"],
         "sample_id": sample["sample_id"],
         "source": sample["source"],
         "split": sample["split"],
@@ -551,10 +612,19 @@ def write_report(run_dir: Path, manifest, control, records, started,
     lines.append("")
 
     lines.append("## Method and caveats")
-    lines.append(f"* Prompt: `{STYLE_NAME}` — the strawdi_segmentation nine-field "
-                 "output standard with fruit-generic wording (scene, fruit noun, "
-                 "ripe-colour anchors parameterised per dataset; JSON key "
-                 "`fruits`). Printed in full in responses.jsonl.")
+    fmt = run_summary.get("format", "full9")
+    fmt_desc = {
+        "full9": "the strawdi_segmentation nine-field census (bbox, polygon, "
+                 "redness, occlusion, calyx, peduncle, graspable, confidence, "
+                 "description)",
+        "seg3": "bbox + polygon + confidence_pct — the minimal format for a "
+                "segmentation task",
+        "box2": "bbox + confidence_pct — the minimal format for a pure "
+                "detection task (no polygons; mask metrics n/a by design)",
+    }[fmt]
+    lines.append(f"* Output format `{fmt}`: {fmt_desc}. Scene/fruit wording "
+                 "parameterised per dataset; JSON key `fruits`. The prompt is "
+                 "printed in full in responses.jsonl.")
     lines.append(f"* {POLYGON_FIDELITY_NOTE}")
     lines.append(f"* {CONFIDENCE_TIE_NOTE}")
     lines.append("* Per-dataset GT semantics (verified against the data): "
@@ -634,6 +704,10 @@ def parse_args(argv=None):
     ap.add_argument("--manifest", type=Path, default=HERE / "manifest.json")
     ap.add_argument("--out", type=Path, default=DEFAULT_RUNS_DIR)
     ap.add_argument("--tag", default="")
+    ap.add_argument("--format", choices=FORMAT_KEYS, default="full9",
+                    help="output format variant: full9 (nine-field census), "
+                         "seg3 (bbox+polygon+confidence), box2 (bbox+"
+                         "confidence)")
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--sources", nargs="*", default=None,
                     help="subset of sources (default: all in the manifest)")
@@ -679,17 +753,19 @@ def main(argv=None) -> None:
         s = samples[0]
         w, h = s["image_shape_hw"][1], s["image_shape_hw"][0]
         print(f"plan: {len(samples)} frames x 1 prompt = {len(samples)} calls + 1 control")
-        print(f"model: {model}  provider={args.provider}  effort={effort or 'default'}")
+        print(f"model: {model}  provider={args.provider}  effort={effort or 'default'}  "
+              f"format={args.format} ({fruit_prompt.FORMATS[args.format]['style']})")
         print("\n--- first prompt "
               f"({s['source']}, {w}x{h}) " + "-" * 30)
-        print(fruit_prompt.build_fruit_inventory_segmentation(w, h, s["source"]))
+        print(fruit_prompt.build_prompt(args.format, w, h, s["source"]))
         return
 
     info = harness_info()
     base = vre.harness_info()
     stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
     cli_name = {"claude": "claude", "agy": "agy"}.get(args.provider, "codex")
-    run_dir = args.out / run_dir_name(stamp, model, effort, args.tag, cli=cli_name)
+    run_dir = args.out / run_dir_name(stamp, model, effort, args.tag,
+                                      cli=cli_name, fmt=args.format)
     run_dir.mkdir(parents=True, exist_ok=False)
     tmp = run_dir / ".tmp"
     tmp.mkdir()
@@ -701,7 +777,8 @@ def main(argv=None) -> None:
 
     run_ctx = {"run_dir": run_dir, "tmp": tmp, "agent_cwd": agent_cwd,
                "model": model, "effort": effort, "harness": info,
-               "base_harness": base, "args": args}
+               "base_harness": base, "args": args, "fmt": args.format,
+               "fmt_spec": fruit_prompt.FORMATS[args.format]}
 
     started = dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")
     t0 = time.perf_counter()
@@ -710,8 +787,9 @@ def main(argv=None) -> None:
 
     print(f"run dir : {run_dir}")
     print(f"model   : {model}  provider={args.provider}  "
-          f"effort={effort or 'config default'}")
-    print(f"plan    : {len(samples)} frames x 1 prompt ({STYLE_NAME}) "
+          f"effort={effort or 'config default'}  format={args.format}")
+    print(f"plan    : {len(samples)} frames x 1 prompt "
+          f"({run_ctx['fmt_spec']['style']}) "
           f"= {len(samples)} calls + 1 control")
 
     if not args.control_image:
@@ -768,6 +846,7 @@ def main(argv=None) -> None:
     elapsed = time.perf_counter() - t0
 
     run_summary = {"model": model, "effort": effort, "provider": args.provider,
+                   "format": args.format,
                    **vre.cli_identity(args.provider), "catalog": catalog_info,
                    "harness": info, "base_harness": base}
     write_artifacts(run_dir, manifest, control, records, started, elapsed,

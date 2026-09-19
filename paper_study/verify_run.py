@@ -169,9 +169,13 @@ def main(argv=None) -> None:
         else:
             sample = by_sample[sid]
             if sample["gt_masks"]["kind"] != "none":
-                c.check(rec.get("gt_mask_error") is not None or
-                        not rec.get("gt_masks_loaded"),
-                        f"[{sid}] unscored mask source recorded as such")
+                # Two legitimate ways to be mask-unscored on a mask source:
+                # the format asks no polygons (box2), or GT failed to load.
+                asks_polygons = rec.get("format", "full9") != "box2"
+                c.check((not asks_polygons) or rec.get("gt_mask_error") is not None
+                        or not rec.get("gt_masks_loaded"),
+                        f"[{sid}] unscored mask source recorded as such "
+                        f"(format={rec.get('format', 'full9')})")
 
     # --- summary consistency ---------------------------------------------------
     import csv

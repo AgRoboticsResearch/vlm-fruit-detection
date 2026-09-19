@@ -1,0 +1,31 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["fruits"],
+  "properties": {
+    "fruits": {
+      "type": "array",
+      "description": "EVERY fruit instance visible in the image, ripe or not, including partially occluded ones.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["bbox", "confidence_pct"],
+        "properties": {
+          "bbox": {
+            "type": "array",
+            "minItems": 4,
+            "maxItems": 4,
+            "description": "Bounding box [x1, y1, x2, y2] of the whole fruit, including the parts hidden behind leaves or other fruit. Fruit body only: exclude the calyx and stem when they sit apart from the fruit; a calyx lying flat on the fruit is inside.",
+            "items": {"type": "integer"}
+          },
+          "confidence_pct": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "How confident you are that this really is a fruit instance of the asked kind."
+          }
+        }
+      }
+    }
+  }
+}

@@ -49,7 +49,8 @@ STRAWDI = GLOWAY / "StrawDI_Db1"
 KFUJI = EXTRA / "kfuji_rgb_ds" / "extracted" / "preprocessed data"
 
 MAX_EDGE = 1280        # the base harness's no-resize ceiling (invariant I6)
-PER_SOURCE = 3
+PER_SOURCE = 3          # default; --per-source overrides (testbed20 etc.)
+FRAMES_DIR = HERE / "data" / "frames"   # default; main() retargets per --per-source
 MIN_GT = 3
 
 SCHEMA_VERSION = "paper_testbed/1"
@@ -144,7 +145,7 @@ def source_strawdi() -> list[dict]:
         stem = Path(name).stem
         src_img = test_dir / "img" / name
         src_lab = test_dir / "label" / name
-        dst = HERE / "data" / "frames" / f"strawdi-{stem}.png"
+        dst = FRAMES_DIR / f"strawdi-{stem}.png"
         (wh, downscaled) = normalise_frame(src_img, dst)
         s = wh[0] / Image.open(src_img).size[0]
         mask = np.array(Image.open(src_lab))
@@ -160,8 +161,8 @@ def source_strawdi() -> list[dict]:
         samples.append({
             "sample_id": f"strawdi-{stem}",
             "source": "strawdi", "split": "test", "has_gt": True,
-            "image": f"data/frames/strawdi-{stem}.png",
-            "images": {"raw": f"data/frames/strawdi-{stem}.png"},
+            "image": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/strawdi-{stem}.png",
+            "images": {"raw": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/strawdi-{stem}.png"},
             "image_shape_hw": [wh[1], wh[0]],
             "source_image": str(src_img),
             "source_image_shape_hw": list(reversed(Image.open(src_img).size)),
@@ -190,14 +191,14 @@ def source_minneapple() -> list[dict]:
     for name in picked:
         src_img = MINNEAPPLE / "test" / "images" / name
         stem = Path(name).stem
-        dst = HERE / "data" / "frames" / f"minneapple-{stem}.png"
+        dst = FRAMES_DIR / f"minneapple-{stem}.png"
         (wh, _downscaled) = normalise_frame(src_img, dst)
         instances = by_file[name]
         samples.append({
             "sample_id": f"minneapple-{stem}",
             "source": "minneapple", "split": "test", "has_gt": True,
-            "image": f"data/frames/minneapple-{stem}.png",
-            "images": {"raw": f"data/frames/minneapple-{stem}.png"},
+            "image": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/minneapple-{stem}.png",
+            "images": {"raw": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/minneapple-{stem}.png"},
             "image_shape_hw": [wh[1], wh[0]],
             "source_image": str(src_img),
             "source_image_shape_hw": list(reversed(Image.open(src_img).size)),
@@ -232,7 +233,7 @@ def source_wgisd() -> list[dict]:
         src_img = WGISD / "data" / name
         src_txt = WGISD / "data" / f"{stem}.txt"
         src_npz = WGISD / "data" / f"{stem}.npz"
-        dst = HERE / "data" / "frames" / f"wgisd-{stem}.png"
+        dst = FRAMES_DIR / f"wgisd-{stem}.png"
         (wh, downscaled) = normalise_frame(src_img, dst)
         src_wh = Image.open(src_img).size
         boxes = gtload.wgisd_boxes(src_txt, src_wh[0], src_wh[1])
@@ -247,8 +248,8 @@ def source_wgisd() -> list[dict]:
         samples.append({
             "sample_id": f"wgisd-{stem}",
             "source": "wgisd", "split": "test", "has_gt": True,
-            "image": f"data/frames/wgisd-{stem}.png",
-            "images": {"raw": f"data/frames/wgisd-{stem}.png"},
+            "image": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/wgisd-{stem}.png",
+            "images": {"raw": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/wgisd-{stem}.png"},
             "image_shape_hw": [wh[1], wh[0]],
             "source_image": str(src_img),
             "source_image_shape_hw": list(reversed(src_wh)),
@@ -280,14 +281,14 @@ def source_kfuji() -> list[dict]:
     samples = []
     for entry in picked:
         src_img = KFUJI / "images" / f"{entry.replace('_RGB', '_RGBhr')}.jpg"
-        dst = HERE / "data" / "frames" / f"kfuji-{entry}.png"
+        dst = FRAMES_DIR / f"kfuji-{entry}.png"
         (wh, downscaled) = normalise_frame(src_img, dst)
         boxes = gtload.kfuji_boxes(KFUJI / "annotations" / f"{entry}.csv")
         samples.append({
             "sample_id": f"kfuji-{entry}",
             "source": "kfuji", "split": "test", "has_gt": True,
-            "image": f"data/frames/kfuji-{entry}.png",
-            "images": {"raw": f"data/frames/kfuji-{entry}.png"},
+            "image": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/kfuji-{entry}.png",
+            "images": {"raw": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/kfuji-{entry}.png"},
             "image_shape_hw": [wh[1], wh[0]],
             "source_image": str(src_img),
             "source_image_shape_hw": list(reversed(Image.open(src_img).size)),
@@ -313,14 +314,14 @@ def source_acfr(fruit: str, kind: str) -> list[dict]:
     for csv_name in picked:
         stem = csv_name[:-4]
         src_img = ACFR / fruit / "images" / f"{stem}.png"
-        dst = HERE / "data" / "frames" / f"acfr_{fruit}-{stem}.png"
+        dst = FRAMES_DIR / f"acfr_{fruit}-{stem}.png"
         (wh, downscaled) = normalise_frame(src_img, dst)
         boxes = gtload.acfr_boxes(ACFR / fruit / "annotations" / csv_name, kind)
         samples.append({
             "sample_id": f"acfr_{fruit}-{stem}",
             "source": f"acfr_{fruit}", "split": "test", "has_gt": True,
-            "image": f"data/frames/acfr_{fruit}-{stem}.png",
-            "images": {"raw": f"data/frames/acfr_{fruit}-{stem}.png"},
+            "image": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/acfr_{fruit}-{stem}.png",
+            "images": {"raw": f"{FRAMES_DIR.relative_to(HERE).as_posix()}/acfr_{fruit}-{stem}.png"},
             "image_shape_hw": [wh[1], wh[0]],
             "source_image": str(src_img),
             "source_image_shape_hw": list(reversed(Image.open(src_img).size)),
@@ -339,10 +340,22 @@ def source_acfr(fruit: str, kind: str) -> list[dict]:
 
 
 def main() -> None:
-    frames_dir = HERE / "data" / "frames"
-    if frames_dir.exists():
-        shutil.rmtree(frames_dir)
-    frames_dir.mkdir(parents=True)
+    import argparse
+    global PER_SOURCE, FRAMES_DIR
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--per-source", type=int, default=3,
+                    help="frames per dataset (default 3; N != 3 writes "
+                         "manifest{N}.json + data/frames{N}/ so the default "
+                         "testbed stays intact)")
+    args = ap.parse_args()
+    PER_SOURCE = args.per_source
+    suffix = "" if PER_SOURCE == 3 else str(PER_SOURCE)
+    FRAMES_DIR = HERE / "data" / f"frames{suffix}"
+    out_path = HERE / f"manifest{suffix}.json"
+
+    if FRAMES_DIR.exists():
+        shutil.rmtree(FRAMES_DIR)
+    FRAMES_DIR.mkdir(parents=True)
     control_src = REPO / "blog_study" / "vlm_eval" / "data" / "control" / "control_6305.png"
     (HERE / "data" / "control").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(control_src, HERE / "data" / "control" / "control_6305.png")
@@ -355,23 +368,22 @@ def main() -> None:
                + source_acfr("almonds", "rects")
                + source_kfuji())
 
-    # strawdi gt_areas were approximated from box extents above; recompute all
-    # box-source areas consistently as box areas (mask sources override at
-    # score time anyway — records carry gt_areas for the box scorer).
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "harness": HARNESS_NAME,
         "generated_at": __import__("datetime").datetime.now().astimezone().isoformat(timespec="seconds"),
         "generator": "paper_study/build_testbed_manifest.py",
         "dataset": {
-            "description": "mixed cross-fruit testbed: 3 frames per dataset, "
-                           "each dataset's own TEST split, GT per its protocol",
+            "description": f"mixed cross-fruit testbed: {PER_SOURCE} frames per "
+                           "dataset, each dataset's own TEST split, GT per its "
+                           "protocol",
             "roots": {"gloway": str(GLOWAY)},
             "per_source": PER_SOURCE,
             "min_gt": MIN_GT,
             "selection_rule": f"per source: test split, keep frames with >= {MIN_GT} "
                               "GT instances (wgisd: also require cluster-mask .npz), "
-                              "sort by file name, pick 3 evenly spaced indices",
+                              "sort by file name, pick {PER_SOURCE} evenly spaced "
+                              "indices",
             "protocols": PROTOCOL,
             "skipped": {},
         },
@@ -401,7 +413,7 @@ def main() -> None:
         manifest["statistics"]["by_source"].setdefault(s["source"], 0)
         manifest["statistics"]["by_source"][s["source"]] += 1
 
-    out = HERE / "manifest.json"
+    out = out_path
     out.write_text(json.dumps(manifest, indent=1) + "\n")
     print(f"wrote {out} — {len(samples)} samples:")
     for src in sorted({s['source'] for s in samples}):

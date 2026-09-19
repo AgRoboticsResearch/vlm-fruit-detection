@@ -28,6 +28,8 @@ task → protocol → metrics → our numbers) and GT conventions.
 | --- | --- |
 | `AGENTS.md` (this file) | runbook |
 | `DATASETS.md` | tracking table: datasets, tasks, protocols, metrics |
+| `PROMPTS.md` | the three prompt variants documented (full9 / seg3 / box2, verbatim + parameterisation) |
+| `FORMAT_COMPARISON.md` | the 20-frames/dataset output-format comparison |
 | `build_testbed_manifest.py` | curate 3 frames/dataset from each TEST split, normalise to ≤1280, read + snapshot GT → `manifest.json` + `data/frames/` |
 | `run_fruit_eval.py` | the harness: control → per-frame inventory call → parse → score → report |
 | `lib/prompt.py` | `fruit_inventory_segmentation` — the strawdi seg prompt, fruit-generic (scene/fruit noun/ripe-colour anchors per dataset) |
@@ -41,10 +43,21 @@ task → protocol → metrics → our numbers) and GT conventions.
 
 ```bash
 python3 paper_study/build_testbed_manifest.py                 # needs the GLOWAY mount
+python3 paper_study/build_testbed_manifest.py --per-source 20 # temporary bigger testbed
 python3 paper_study/run_fruit_eval.py --dry-run               # plan + first prompt, 0 calls
 python3 paper_study/run_fruit_eval.py --jobs 3 --tag full --reasoning-effort max
+python3 paper_study/run_fruit_eval.py --format box2 --tag ...  # output-format variants
 python3 paper_study/verify_run.py paper_study/runs/<run dir>   # must print PASS
 ```
+
+`--per-source N` (N≠3) writes `manifest{N}.json` + `data/frames{N}/` and
+leaves the committed 3-frame default untouched — bigger testbeds are
+scratch unless promoted deliberately.
+
+`--format {full9,seg3,box2}` selects the per-fruit output field set
+(nine-field census / bbox+polygon+confidence / bbox+confidence); task
+wording is held constant across formats so runs are comparable
+(`FORMAT_COMPARISON.md`). box2 asks no polygons → mask metrics n/a.
 
 The claude CLI child needs network + write outside a read-only sandbox
 (escalate). Default model glm-5.3-flash (the multimodal GLM-5.3; the

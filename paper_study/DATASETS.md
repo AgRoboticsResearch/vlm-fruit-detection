@@ -80,6 +80,11 @@ are recorded per run (with the confidence-clumping caveat) in each run dir's
 `summary_by_source.csv`. Per-run numbers land in the table above via each
 run's report; keep this file updated when a run completes.
 
+The 20-frames/dataset output-format comparison (full9 vs seg3 vs box2,
+same model/effort/testbed) lives in
+[`FORMAT_COMPARISON.md`](FORMAT_COMPARISON.md) — its runs use the temporary
+`manifest20.json` and are separate from the 3-frame baseline above.
+
 ## GT semantics and conventions (verified against the data 2026-09-18)
 
 * **StrawDI_Db1** — grayscale id-map PNGs (0 bg, 1..N instance), 1008×756;
